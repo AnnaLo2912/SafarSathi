@@ -9,6 +9,7 @@ import GuideNetwork from './components/GuideNetwork'
 import Footer from './components/Footer'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import CertificateUpload from './pages/CertificateUpload'
 
 function HomePage() {
   return (
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/certificate-upload" element={<CertificateUpload />} />
       </Routes>
     </Router>
   )
