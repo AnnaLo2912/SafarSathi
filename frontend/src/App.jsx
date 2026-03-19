@@ -18,9 +18,10 @@ function HomePage() {
   return (
     <div className="bg-cream font-garamond page-fade-in">
       <Navbar />
-      <div id="home">
-        <Hero />
-      </div>
+      <div className="pt-20">
+        <div id="home">
+          <Hero />
+        </div>
       <div id="features">
         <FeaturesStrip />
       </div>
@@ -38,6 +39,7 @@ function HomePage() {
       </div>
       <div id="contact">
         <Footer />
+      </div>
       </div>
 
       {/* Floating SOS Button */}

@@ -5,17 +5,31 @@ import { useAuth } from '../context/AuthContext'
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
   const navigate = useNavigate()
   const { currentUser, userRole, logout } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
+      const currentScrollY = window.scrollY
+      
+      // Show navbar only if at the very top
+      if (currentScrollY < 50) {
+        setIsVisible(true)
+      } 
+      // Hide navbar if scrolling down past threshold
+      else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsVisible(false)
+      }
+      
+      setScrolled(currentScrollY > 50)
+      setLastScrollY(currentScrollY)
     }
 
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [lastScrollY])
 
   const navLinks = [
     { label: 'Home', id: 'home' },
@@ -38,8 +52,10 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed w-full top-0 z-50 bg-cream border-b border-sand transition-shadow duration-300 ${
-          scrolled ? 'shadow-md' : ''
+        className={`fixed w-full top-0 z-50 bg-cream border-b border-sand transition-all duration-300 transform ${
+          isVisible ? 'translate-y-0' : '-translate-y-full'
+        } ${
+          scrolled ? 'shadow-lg' : 'shadow-sm'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -117,7 +133,7 @@ export default function Navbar() {
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div className="fixed w-full top-20 z-40 bg-cream px-6 py-4 md:hidden">
+        <div className="fixed w-full top-16 left-0 z-40 bg-cream px-6 py-4 md:hidden border-b border-sand shadow-md">
           {navLinks.map((link) => (
             <button
               key={link.id}

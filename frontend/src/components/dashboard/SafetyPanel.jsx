@@ -189,33 +189,35 @@ export default function SafetyPanel() {
           </div>
 
           {/* SAFETY SCORE CARD */}
-          <div className="bg-sand rounded-3xl p-6 mb-6 flex items-center justify-between">
-            <div>
-              <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/50 mb-1">
-                AI Safety Score
+          <div className="bg-sand rounded-3xl p-6 mb-6">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/50 mb-1">
+                  AI Safety Score
+                </div>
+                <div className="font-playfair text-5xl text-charcoal font-bold">92</div>
+                <div className="font-garamond text-sm text-charcoal/50">
+                  / 100 — Low Risk Area
+                </div>
               </div>
-              <div className="font-playfair text-5xl text-charcoal font-bold">92</div>
-              <div className="font-garamond text-sm text-charcoal/50">
-                / 100 — Low Risk Area
+
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full border-4 border-green-400 flex items-center justify-center bg-green-50 relative">
+                  <span className="text-3xl">🛡️</span>
+                  <div className="absolute inset-0 rounded-full border-2 border-green-300 animate-ping opacity-30"></div>
+                </div>
               </div>
             </div>
 
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full border-4 border-green-400 flex items-center justify-center bg-green-50 relative">
-                <span className="text-3xl">🛡️</span>
-                <div className="absolute inset-0 rounded-full border-2 border-green-300 animate-ping opacity-30"></div>
+            <div className="flex gap-2 flex-wrap">
+              <div className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full border border-sand whitespace-nowrap">
+                ✓ Safe Zone
               </div>
-
-              <div className="flex gap-2 mt-4 flex-wrap justify-center absolute top-full left-0 right-0 mt-4 min-w-max">
-                <div className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full border border-sand whitespace-nowrap">
-                  ✓ Safe Zone
-                </div>
-                <div className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full border border-sand whitespace-nowrap">
-                  ✓ Guide Nearby
-                </div>
-                <div className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full border border-sand whitespace-nowrap">
-                  ✓ GPS Active
-                </div>
+              <div className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full border border-sand whitespace-nowrap">
+                ✓ Guide Nearby
+              </div>
+              <div className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full border border-sand whitespace-nowrap">
+                ✓ GPS Active
               </div>
             </div>
           </div>

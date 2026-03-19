@@ -1,7 +1,22 @@
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import Navbar from '../components/Navbar'
 
 export default function GuideDashboard() {
+  const [activeTab, setActiveTab] = useState('overview')
+  const [available, setAvailable] = useState(true)
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'bookings', label: 'Bookings', icon: '📅' },
+    { id: 'alerts', label: 'Panic Alerts', icon: '🚨' },
+    { id: 'map', label: 'Tourist Map', icon: '📍' },
+    { id: 'chat', label: 'Messages', icon: '💬' },
+    { id: 'earnings', label: 'Earnings', icon: '💰' },
+    { id: 'profile', label: 'Profile', icon: '👤' }
+  ]
+
   const { userProfile, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -11,7 +26,9 @@ export default function GuideDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-cream flex items-center justify-center pt-20">
       <div className="text-center">
         <div className="font-playfair text-5xl text-charcoal font-bold mb-4">
           🗺️ Guide Dashboard
@@ -42,5 +59,6 @@ export default function GuideDashboard() {
         </button>
       </div>
     </div>
+    </>
   )
 }

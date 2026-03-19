@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import Navbar from '../components/Navbar'
 
 export default function CertificateUpload() {
   const [file, setFile] = useState(null)
@@ -67,36 +68,9 @@ export default function CertificateUpload() {
   }
 
   return (
-    <div className="min-h-screen bg-cream">
-      {/* TOP BAR */}
-      <div className="bg-deepblue px-8 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="font-playfair text-2xl font-bold text-white">
-            SafarSathi
-          </h1>
-          <p className="font-garamond text-xs italic text-saffron ml-1">
-            सुरक्षित यात्रा
-          </p>
-        </div>
-
-        <div className="flex items-center">
-          <span className="font-garamond text-sm text-white/70">
-            👋 {userProfile?.name || 'Guide'}
-          </span>
-          <button
-            onClick={() => {
-              // Logout logic here
-              navigate('/')
-            }}
-            className="font-garamond text-xs text-white/40 uppercase tracking-wider ml-6 cursor-pointer hover:text-white/60 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <div className="max-w-2xl mx-auto px-6 py-16">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-cream pt-20">
         {!uploaded ? (
           <>
             {/* HEADER */}
@@ -350,6 +324,6 @@ export default function CertificateUpload() {
           </>
         )}
       </div>
-    </div>
+    </>
   )
 }

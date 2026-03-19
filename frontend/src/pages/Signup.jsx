@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
+import Navbar from '../components/Navbar'
 
 export default function Signup() {
   const [step, setStep] = useState(1) // 1: role select, 2: form
@@ -59,7 +60,9 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-cream flex pt-20">
       {/* LEFT PANEL */}
       <div className="hidden lg:flex lg:w-1/2 bg-deepblue relative overflow-hidden">
         {/* Background Image */}
@@ -389,6 +392,7 @@ export default function Signup() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
