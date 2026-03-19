@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const { currentUser, userRole, logout } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,6 +28,11 @@ export default function Navbar() {
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
     setMobileMenuOpen(false)
+  }
+
+  async function handleLogout() {
+    await logout()
+    navigate('/')
   }
 
   return (
@@ -64,12 +71,38 @@ export default function Navbar() {
             <button className="bg-terracotta text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-red-700 transition-colors">
               🚨 SOS
             </button>
-            <button 
-              onClick={() => navigate('/login')}
-              className="hidden sm:block border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full ml-3 hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
-            >
-              Login
-            </button>
+            
+            {currentUser ? (
+              <>
+                <button 
+                  onClick={() => navigate(userRole === 'guide' ? '/guide-dashboard' : '/tourist-dashboard')}
+                  className="hidden sm:block bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
+                >
+                  {userRole === 'guide' ? '🗺️ Dashboard' : '🧳 Dashboard'}
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="hidden sm:block border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full ml-2 hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/signup')}
+                  className="hidden sm:block bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
+                >
+                  Sign Up
+                </button>
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="hidden sm:block border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full ml-2 hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
+                >
+                  Login
+                </button>
+              </>
+            )}
 
             {/* Mobile Hamburger Menu */}
             <button
@@ -94,15 +127,50 @@ export default function Navbar() {
               {link.label}
             </button>
           ))}
-          <button 
-            onClick={() => {
-              navigate('/login')
-              setMobileMenuOpen(false)
-            }}
-            className="w-full mt-4 border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
-          >
-            Login
-          </button>
+          
+          {currentUser ? (
+            <>
+              <button 
+                onClick={() => {
+                  navigate(userRole === 'guide' ? '/guide-dashboard' : '/tourist-dashboard')
+                  setMobileMenuOpen(false)
+                }}
+                className="w-full mt-4 bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
+              >
+                {userRole === 'guide' ? '🗺️ Dashboard' : '🧳 Dashboard'}
+              </button>
+              <button 
+                onClick={() => {
+                  handleLogout()
+                  setMobileMenuOpen(false)
+                }}
+                className="w-full mt-2 border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => {
+                  navigate('/signup')
+                  setMobileMenuOpen(false)
+                }}
+                className="w-full mt-4 bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
+              >
+                Sign Up
+              </button>
+              <button 
+                onClick={() => {
+                  navigate('/login')
+                  setMobileMenuOpen(false)
+                }}
+                className="w-full mt-2 border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
+              >
+                Login
+              </button>
+            </>
+          )}
         </div>
       )}
     </>
