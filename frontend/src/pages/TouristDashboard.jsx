@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import TripPlanner from '../components/dashboard/TripPlanner'
+import SafetyPanel from '../components/dashboard/SafetyPanel'
 
 export default function TouristDashboard() {
   const [activeTab, setActiveTab] = useState('planner')
@@ -100,11 +101,7 @@ export default function TouristDashboard() {
       {/* MAIN CONTENT AREA */}
       <main className="max-w-7xl mx-auto px-6 py-10 pb-24 md:pb-10">
         {activeTab === 'planner' && <TripPlanner />}
-        {activeTab === 'safety' && (
-          <div className="text-center py-20 font-playfair text-3xl text-charcoal/30">
-            Safety Panel — Coming Soon
-          </div>
-        )}
+        {activeTab === 'safety' && <SafetyPanel />}
         {activeTab === 'wallet' && (
           <div className="text-center py-20 font-playfair text-3xl text-charcoal/30">
             Wallet — Coming Soon

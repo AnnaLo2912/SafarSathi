@@ -30,3 +30,7 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# System
+.DS_Store
+Thumbs.db
