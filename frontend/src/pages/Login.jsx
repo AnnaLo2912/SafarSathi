@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import Navbar from '../components/Navbar'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -56,7 +57,9 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-cream flex pt-20">
       {/* LEFT PANEL */}
       <div className="hidden lg:flex lg:w-1/2 bg-deepblue relative overflow-hidden">
         {/* Background Image */}
@@ -243,6 +246,7 @@ export default function Login() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
