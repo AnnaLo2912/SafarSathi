@@ -1,78 +1,65 @@
 import Trip from "../models/Trip.model.js";
-import Tourist from "../models/Tourist.model.js";
 import { generateItinerary, generatePackingList } from "../services/gemini.service.js";
 
 // ── Generate AI Trip ──────────────────────────────────────────
 // POST /api/trips/generate
-// Optional auth — works for guests too
+// Works for guests too — if logged in, saved to their account
 export const generateTrip = async (req, res) => {
   try {
-    const { destination, duration, budget, travelers, tripStyle, startDate } =
-      req.body;
+    const {
+      destination, duration, budget,
+      travelers, tripStyle, startDate,
+    } = req.body;
 
-    // Validate required fields
     if (!destination || !duration || !budget) {
       return res.status(400).json({
         success: false,
-        message: "Destination, duration (nights), and budget (USD) are required",
+        message: "Destination, duration and budget are required",
       });
-    }
-
-    if (budget < 20) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Minimum budget is $20 USD" });
     }
 
     console.log(`🤖 Generating itinerary for ${destination}...`);
 
-    // Call Gemini AI
     const aiData = await generateItinerary({
       destination,
-      duration: parseInt(duration),
-      budget: parseFloat(budget),
+      duration:  parseInt(duration),
+      budget:    parseFloat(budget),
       travelers: parseInt(travelers) || 1,
       tripStyle: tripStyle || "budget",
       startDate,
     });
 
-    // Build trip object
     const tripData = {
       destination,
-      duration: parseInt(duration),
-      budget: parseFloat(budget),
+      duration:  parseInt(duration),
+      budget:    parseFloat(budget),
       travelers: parseInt(travelers) || 1,
       tripStyle: tripStyle || "budget",
       startDate: startDate ? new Date(startDate) : undefined,
       ...aiData,
     };
 
-    // Attach to logged-in tourist if available
-    if (req.tourist) {
-      tripData.tourist = req.tourist._id;
+    // If user is logged in — attach their Firebase UID
+    if (req.user) {
+      tripData.firebaseUid = req.user.uid;
+      tripData.userEmail   = req.user.email;
     }
 
-    // Save to DB
+    // Save to MongoDB
     const trip = await Trip.create(tripData);
-
-    // Add to tourist's saved trips if logged in
-    if (req.tourist) {
-      await Tourist.findByIdAndUpdate(req.tourist._id, {
-        $push: { savedTrips: trip._id },
-      });
-    }
 
     res.status(201).json({
       success: true,
       message: `✈️ ${duration}-night itinerary for ${destination} generated!`,
       trip,
     });
+
   } catch (err) {
-    console.error("Trip generation error:", err.message);
+    console.error("❌ Trip generation error:", err.message);
     res.status(500).json({
       success: false,
       message: "Failed to generate itinerary. Please try again.",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+      error: err.message,
     });
   }
 };
@@ -81,14 +68,11 @@ export const generateTrip = async (req, res) => {
 // GET /api/trips/:id
 export const getTrip = async (req, res) => {
   try {
-    const trip = await Trip.findById(req.params.id).populate(
-      "tourist",
-      "name email"
-    );
+    const trip = await Trip.findById(req.params.id);
     if (!trip) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Trip not found" });
+      return res.status(404).json({
+        success: false, message: "Trip not found",
+      });
     }
     res.json({ success: true, trip });
   } catch (err) {
@@ -97,15 +81,14 @@ export const getTrip = async (req, res) => {
 };
 
 // ── Get My Trips ──────────────────────────────────────────────
-// GET /api/trips/my
+// GET /api/trips/my  (protected — must be logged in)
 export const getMyTrips = async (req, res) => {
   try {
-    const trips = await Trip.find({ tourist: req.tourist._id })
+    const trips = await Trip.find({ firebaseUid: req.user.uid })
       .sort({ createdAt: -1 })
       .select(
-        "destination duration budget tripStyle status startDate createdAt galleryImages summary highlights"
+        "destination duration budget tripStyle status startDate createdAt summary highlights"
       );
-
     res.json({ success: true, count: trips.length, trips });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -113,7 +96,7 @@ export const getMyTrips = async (req, res) => {
 };
 
 // ── Save Trip ─────────────────────────────────────────────────
-// PUT /api/trips/:id/save
+// PUT /api/trips/:id/save  (protected)
 export const saveTrip = async (req, res) => {
   try {
     const trip = await Trip.findByIdAndUpdate(
@@ -122,62 +105,57 @@ export const saveTrip = async (req, res) => {
       { new: true }
     );
     if (!trip) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Trip not found" });
+      return res.status(404).json({
+        success: false, message: "Trip not found",
+      });
     }
-    res.json({ success: true, message: "Trip saved!", trip });
+    res.json({ success: true, message: "Trip saved! ✅", trip });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // ── Delete Trip ───────────────────────────────────────────────
-// DELETE /api/trips/:id
+// DELETE /api/trips/:id  (protected — only owner can delete)
 export const deleteTrip = async (req, res) => {
   try {
     const trip = await Trip.findOneAndDelete({
-      _id: req.params.id,
-      tourist: req.tourist._id,
+      _id:         req.params.id,
+      firebaseUid: req.user.uid,  // can only delete own trips
     });
-
     if (!trip) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Trip not found" });
+      return res.status(404).json({
+        success: false, message: "Trip not found",
+      });
     }
-
-    // Remove from tourist's saved trips
-    await Tourist.findByIdAndUpdate(req.tourist._id, {
-      $pull: { savedTrips: req.params.id },
-    });
-
     res.json({ success: true, message: "Trip deleted" });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ── Generate Packing List ─────────────────────────────────────
+// ── Packing List ──────────────────────────────────────────────
 // POST /api/trips/packing-list
 export const getPackingList = async (req, res) => {
   try {
     const { destination, duration, season } = req.body;
-
     if (!destination) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Destination is required" });
+      return res.status(400).json({
+        success: false, message: "Destination is required",
+      });
     }
-
     const packingList = await generatePackingList({
-      destination,
-      duration,
-      season,
+      destination, duration, season,
     });
-
     res.json({ success: true, packingList });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+
+
+
+
+
+

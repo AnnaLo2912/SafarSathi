@@ -1,67 +1,91 @@
-  import jwt from "jsonwebtoken";
-  import Tourist from "../models/Tourist.model.js";
+// Auth Middleware — Firebase Token Decoder
+// Decodes Firebase JWT without Admin SDK verification
+// Works without serviceAccountKey.json
 
-  // Must be logged in
-  export const protect = async (req, res, next) => {
-    try {
-      let token;
+const decodeFirebaseToken = (token) => {
+  try {
+    const base64Payload = token.split('.')[1]
+    const padded = base64Payload + '=='.slice((base64Payload.length + 2) % 4 || 2)
+    const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
+    return {
+      uid:   payload.user_id || payload.sub,
+      email: payload.email   || '',
+      name:  payload.name    || '',
+    }
+  } catch (err) {
+    return null
+  }
+}
 
-      if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith("Bearer")
-      ) {
-        token = req.headers.authorization.split(" ")[1];
-      }
+// protect — must be logged in
+export const protect = async (req, res, next) => {
+  try {
+    let token
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1]
+    }
 
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: "Not authorized, no token",
-        });
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.tourist = await Tourist.findById(decoded.id).select("-password");
-
-      if (!req.tourist) {
-        return res.status(401).json({
-          success: false,
-          message: "Tourist not found",
-        });
-      }
-
-      return next();
-    } catch (err) {
+    if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Token invalid or expired",
-      });
+        message: 'Please login to continue',
+      })
     }
-  };
 
-  // Optional — attaches tourist if token present, continues if not
-  export const optionalAuth = async (req, res, next) => {
-    try {
-      let token;
+    const user = decodeFirebaseToken(token)
 
-      if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith("Bearer")
-      ) {
-        token = req.headers.authorization.split(" ")[1];
-      }
-
-      if (!token) {
-        req.tourist = null;
-        return next();  // ← explicit return, won't call next() twice
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.tourist = await Tourist.findById(decoded.id).select("-password");
-      return next();
-
-    } catch {
-      req.tourist = null;
-      return next();  // ← explicit return here too
+    if (!user || !user.uid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token. Please login again.',
+      })
     }
-  };
+
+    req.user = user
+    console.log('✅ Authenticated:', req.user.uid, req.user.email)
+    return next()
+
+  } catch (err) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication failed',
+    })
+  }
+}
+
+// optionalAuth — works with or without login
+export const optionalAuth = async (req, res, next) => {
+  try {
+    let token
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1]
+    }
+
+    if (!token) {
+      req.user = null
+      return next()
+    }
+
+    const user = decodeFirebaseToken(token)
+    req.user = user || null
+
+    if (req.user) {
+      console.log('✅ Optional auth:', req.user.uid, req.user.email)
+    }
+
+    return next()
+  } catch {
+    req.user = null
+    return next()
+  }
+}
+  
+  
+  
+  

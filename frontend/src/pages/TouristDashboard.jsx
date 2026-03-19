@@ -5,15 +5,17 @@ import TripPlanner from '../components/dashboard/TripPlanner'
 import SafetyPanel from '../components/dashboard/SafetyPanel'
 import WalletPanel from '../components/dashboard/WalletPanel'
 import GuidesPanel from '../components/dashboard/GuidesPanel'
+import MyTrips     from '../components/dashboard/MyTrips'
 
 export default function TouristDashboard() {
   const [activeTab, setActiveTab] = useState('planner')
 
   const tabs = [
     { id: 'planner', label: 'Trip Planner', icon: '🗺️' },
-    { id: 'safety', label: 'Safety', icon: '🚨' },
-    { id: 'wallet', label: 'Wallet', icon: '💳' },
-    { id: 'guides', label: 'My Guides', icon: '🧭' },
+    { id: 'mytrips', label: 'My Trips',     icon: '📋' },
+    { id: 'safety',  label: 'Safety',       icon: '🚨' },
+    { id: 'wallet',  label: 'Wallet',       icon: '💳' },
+    { id: 'guides',  label: 'My Guides',    icon: '🧭' },
   ]
 
   const { userProfile, logout } = useAuth()
@@ -62,18 +64,13 @@ export default function TouristDashboard() {
 
           {/* RIGHT - User Area */}
           <div className="flex items-center gap-4">
-            {/* Welcome Text (Hidden on Mobile) */}
             <div className="hidden sm:block font-garamond text-sm text-charcoal/60">
               👋 {userProfile?.name || 'Traveller'}
             </div>
-
-            {/* Wallet Badge */}
             <div className="bg-sand border border-sand rounded-full px-4 py-2 flex items-center gap-2 font-garamond text-sm text-charcoal">
               <span>💳</span>
               <span>${userProfile?.walletUSD || '0'}</span>
             </div>
-
-            {/* Logout Button */}
             <button
               onClick={handleLogout}
               className="border border-sand text-charcoal/50 font-garamond text-xs uppercase tracking-wider px-4 py-2 rounded-full hover:border-terracotta hover:text-terracotta transition-all duration-300"
@@ -103,9 +100,10 @@ export default function TouristDashboard() {
       {/* MAIN CONTENT AREA */}
       <main className="max-w-7xl mx-auto px-6 py-10 pb-24 md:pb-10">
         {activeTab === 'planner' && <TripPlanner />}
-        {activeTab === 'safety' && <SafetyPanel />}
-        {activeTab === 'wallet' && <WalletPanel />}
-        {activeTab === 'guides' && <GuidesPanel />}
+        {activeTab === 'mytrips' && <MyTrips />}
+        {activeTab === 'safety'  && <SafetyPanel />}
+        {activeTab === 'wallet'  && <WalletPanel />}
+        {activeTab === 'guides'  && <GuidesPanel />}
       </main>
     </div>
   )
