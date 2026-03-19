@@ -1,137 +1,131 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import axios from "axios";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+/**
+ * SafarSathi Backend Service - FINAL MERGED VERSION
+ * Includes: Strict Mongoose Mapping + Real Weather (Open-Meteo)
+ */
 
-export const generateItinerary = async ({
-  destination,
-  duration,
-  budget,
-  travelers = 1,
-  tripStyle = "budget",
-  startDate,
-}) => {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Helper: Fetch real weather from Open-Meteo based on AI-provided coordinates
+const fetchRealWeather = async (lat, lon) => {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=3`;
+    const response = await axios.get(url);
+    
+    const interpretCode = (code) => {
+      if (code <= 3) return "Sunny/Clear";
+      if (code <= 67) return "Rainy/Drizzle";
+      if (code <= 77) return "Snowy";
+      return "Thunderstorm";
+    };
 
-  const prompt = `
-You are an expert travel planner for India. Generate a detailed trip itinerary.
-
-Trip Details:
-- Destination: ${destination}
-- Duration: ${duration} nights (${duration + 1} days)
-- Budget: $${budget} USD total for ${travelers} traveler(s)
-- Style: ${tripStyle}
-- Start Date: ${startDate || "flexible"}
-
-Return ONLY a valid JSON object — no markdown, no explanation, no backticks. Use this exact structure:
-
-{
-  "summary": "2-3 sentence overview",
-  "highlights": ["highlight1", "highlight2", "highlight3", "highlight4", "highlight5"],
-  "dayPlans": [
-    {
-      "day": 1,
-      "title": "Day theme",
-      "attractions": [
-        {
-          "name": "Attraction name",
-          "description": "Short description",
-          "timing": "9:00 AM - 12:00 PM",
-          "entryFee": 5,
-          "entryFeeINR": 415,
-          "category": "monument",
-          "tips": "Practical tip"
-        }
-      ],
-      "meals": {
-        "breakfast": { "name": "Place name", "cost": 3, "costINR": 250 },
-        "lunch":     { "name": "Place name", "cost": 5, "costINR": 415 },
-        "dinner":    { "name": "Place name", "cost": 8, "costINR": 664 }
-      },
-      "transport": { "mode": "auto", "costINR": 150 },
-      "dayTotal": 25
-    }
-  ],
-  "hotelOptions": [
-    {
-      "name": "Budget Hotel",
-      "stars": 2,
-      "pricePerNight": 25,
-      "priceINR": 2075,
-      "rating": 4.1,
-      "amenities": ["WiFi", "AC"]
-    },
-    {
-      "name": "Mid-range Hotel",
-      "stars": 3,
-      "pricePerNight": 60,
-      "priceINR": 4980,
-      "rating": 4.4,
-      "amenities": ["WiFi", "AC", "Breakfast"]
-    },
-    {
-      "name": "Luxury Hotel",
-      "stars": 5,
-      "pricePerNight": 150,
-      "priceINR": 12450,
-      "rating": 4.8,
-      "amenities": ["WiFi", "AC", "Pool", "Spa", "Restaurant"]
-    }
-  ],
-  "budgetBreakdown": {
-    "accommodation": 75,
-    "food": 40,
-    "transport": 15,
-    "attractions": 15,
-    "miscellaneous": 5,
-    "total": 150
-  },
-  "packingList": [
-    "Lightweight cotton clothes",
-    "Comfortable walking shoes",
-    "Sunscreen SPF 50",
-    "Water bottle",
-    "Power bank",
-    "Light jacket for evenings",
-    "Basic medicines",
-    "Camera",
-    "Cash in INR",
-    "Travel insurance docs"
-  ],
-  "travelTips": [
-    "tip1", "tip2", "tip3", "tip4", "tip5"
-  ]
-}
-
-Use real attraction names for ${destination}. Keep prices realistic.
-Exchange rate: 1 USD = 83 INR.
-`;
-
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-
-  // Strip any accidental markdown wrapping
-  const cleaned = text
-    .replace(/```json/gi, "")
-    .replace(/```/gi, "")
-    .trim();
-
-  return JSON.parse(cleaned);
+    return response.data.daily.time.map((date, i) => ({
+      date: new Date(date),
+      tempMax: response.data.daily.temperature_2m_max[i],
+      tempMin: response.data.daily.temperature_2m_min[i],
+      condition: interpretCode(response.data.daily.weathercode[i])
+    }));
+  } catch (error) {
+    console.error("🌤 Weather Service Error:", error.message);
+    return []; // Return empty so it doesn't crash the trip creation
+  }
 };
 
-export const generatePackingList = async ({ destination, duration, season }) => {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+export const generateItinerary = async (data) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is missing from .env");
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
   const prompt = `
-Generate a practical packing list for ${destination} for ${duration} days during ${season || "general"} season.
-Return ONLY a JSON array of strings. Example: ["Item 1", "Item 2"]
-Include 15-20 specific, practical items.
-`;
+    You are an expert travel planner for SafarSathi. Generate a high-detail trip itinerary for ${data.destination}.
+    Duration: ${data.duration} nights. Budget: $${data.budget} USD. Travelers: ${data.travelers || 1}.
+    
+    CRITICAL DATABASE MAPPING RULES:
+    1. For all costs (entry fees, meals, transport), provide values in BOTH USD (e.g., entryFee) and INR (e.g., entryFeeINR).
+    2. Use the rate: 1 USD = 83 INR.
+    3. Ensure NO empty arrays. Every day must have 3 attractions.
+    4. Provide 3 real hotels for "hotelOptions".
+    5. Include accurate "lat" and "lon" coordinates for ${data.destination}.
 
-  const result = await model.generateContent(prompt);
-  const text = result.response
-    .text()
-    .replace(/```json|```/gi, "")
-    .trim();
+    Return ONLY a valid JSON object matching this EXACT Mongoose schema structure:
+    {
+      "lat": 0.0,
+      "lon": 0.0,
+      "summary": "Detailed overview",
+      "highlights": ["h1", "h2", "h3"],
+      "dayPlans": [{
+        "day": 1,
+        "title": "Day Theme",
+        "attractions": [{
+          "name": "Place Name",
+          "description": "Details",
+          "timing": "10:00 AM",
+          "entryFee": 1.20,
+          "entryFeeINR": 100,
+          "category": "Heritage",
+          "tips": "Wear walking shoes"
+        }],
+        "meals": {
+          "breakfast": { "name": "Spot", "cost": 3, "costINR": 250 },
+          "lunch": { "name": "Spot", "cost": 6, "costINR": 500 },
+          "dinner": { "name": "Spot", "cost": 10, "costINR": 830 }
+        },
+        "transport": { "mode": "Rickshaw", "costINR": 300 },
+        "dayTotal": 2000
+      }],
+      "hotelOptions": [{
+        "name": "Hotel Name",
+        "stars": 3,
+        "pricePerNight": 30,
+        "priceINR": 2500,
+        "amenities": ["WiFi", "AC"]
+      }],
+      "budgetBreakdown": {
+        "accommodation": 0, "food": 0, "transport": 0, "attractions": 0, "miscellaneous": 0, "total": 0
+      },
+      "packingList": ["item1", "item2"],
+      "travelTips": ["tip1", "tip2"]
+    }
+  `;
 
-  return JSON.parse(text);
+  try {
+    console.log(`🤖 SafarSathi: Syncing AI & Weather for ${data.destination}...`);
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const cleanedJson = response.text()
+      .replace(/```json/gi, "")
+      .replace(/```/gi, "")
+      .replace(/^[^{]*/, "") 
+      .replace(/[^}]*$/, "") 
+      .trim();
+
+    const itinerary = JSON.parse(cleanedJson);
+
+    // Fetch real weather using AI coordinates before returning
+    if (itinerary.lat && itinerary.lon) {
+      itinerary.weather = await fetchRealWeather(itinerary.lat, itinerary.lon);
+    }
+
+    return itinerary;
+
+  } catch (error) {
+    console.error("❌ Itinerary AI Error:", error.message);
+    throw error;
+  }
+};
+
+export const generatePackingList = async (data) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return ["Passport", "Charger", "Clothes"];
+  const genAI = new GoogleGenerativeAI(apiKey);
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const res = await model.generateContent(`Generate a JSON array of 15 strings for a packing list for ${data.destination}.`);
+    return JSON.parse(res.response.text().replace(/```json|```/gi, "").trim());
+  } catch (error) {
+    return ["Clothes", "Toiletries", "Charger", "Sunscreen"];
+  }
 };
