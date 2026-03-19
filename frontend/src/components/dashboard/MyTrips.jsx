@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../../firebase'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
 
 // ── Full Trip Detail Modal ────────────────────────────────────
 function TripDetailModal({ trip, onClose }) {
