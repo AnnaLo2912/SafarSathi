@@ -86,11 +86,7 @@ export default function App() {
         />
         <Route 
           path="/guide-dashboard" 
-          element={
-            <ProtectedRoute allowedRole="guide">
-              <GuideDashboard />
-            </ProtectedRoute>
-          } 
+          element={<GuideDashboard />} 
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
