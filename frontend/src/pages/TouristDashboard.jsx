@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import TripPlanner from '../components/dashboard/TripPlanner'
 import SafetyPanel from '../components/dashboard/SafetyPanel'
 import WalletPanel from '../components/dashboard/WalletPanel'
+import GuidesPanel from '../components/dashboard/GuidesPanel'
 
 export default function TouristDashboard() {
   const [activeTab, setActiveTab] = useState('planner')
@@ -104,11 +105,7 @@ export default function TouristDashboard() {
         {activeTab === 'planner' && <TripPlanner />}
         {activeTab === 'safety' && <SafetyPanel />}
         {activeTab === 'wallet' && <WalletPanel />}
-        {activeTab === 'guides' && (
-          <div className="text-center py-20 font-playfair text-3xl text-charcoal/30">
-            My Guides — Coming Soon
-          </div>
-        )}
+        {activeTab === 'guides' && <GuidesPanel />}
       </main>
     </div>
   )
