@@ -1,3 +1,4 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import FeaturesStrip from './components/FeaturesStrip'
@@ -6,8 +7,11 @@ import PanicCTA from './components/PanicCTA'
 import Destinations from './components/Destinations'
 import GuideNetwork from './components/GuideNetwork'
 import Footer from './components/Footer'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import CertificateUpload from './pages/CertificateUpload'
 
-export default function App() {
+function HomePage() {
   return (
     <div className="bg-cream font-garamond page-fade-in">
       <Navbar />
@@ -49,5 +53,18 @@ export default function App() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/certificate-upload" element={<CertificateUpload />} />
+      </Routes>
+    </Router>
   )
 }

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,7 +64,10 @@ export default function Navbar() {
             <button className="bg-terracotta text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-red-700 transition-colors">
               🚨 SOS
             </button>
-            <button className="hidden sm:block border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full ml-3 hover:bg-charcoal hover:text-cream transition-colors">
+            <button 
+              onClick={() => navigate('/login')}
+              className="hidden sm:block border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full ml-3 hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
+            >
               Login
             </button>
 
@@ -89,7 +94,13 @@ export default function Navbar() {
               {link.label}
             </button>
           ))}
-          <button className="w-full mt-4 border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-colors">
+          <button 
+            onClick={() => {
+              navigate('/login')
+              setMobileMenuOpen(false)
+            }}
+            className="w-full mt-4 border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
+          >
             Login
           </button>
         </div>
