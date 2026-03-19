@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import FeaturesStrip from './components/FeaturesStrip'
@@ -10,6 +10,9 @@ import Footer from './components/Footer'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import CertificateUpload from './pages/CertificateUpload'
+import ProtectedRoute from './components/ProtectedRoute'
+import TouristDashboard from './pages/TouristDashboard'
+import GuideDashboard from './pages/GuideDashboard'
 
 function HomePage() {
   return (
@@ -63,7 +66,31 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/certificate-upload" element={<CertificateUpload />} />
+        <Route 
+          path="/certificate-upload" 
+          element={
+            <ProtectedRoute allowedRole="guide">
+              <CertificateUpload />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/tourist-dashboard" 
+          element={
+            <ProtectedRoute allowedRole="tourist">
+              <TouristDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/guide-dashboard" 
+          element={
+            <ProtectedRoute allowedRole="guide">
+              <GuideDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   )
