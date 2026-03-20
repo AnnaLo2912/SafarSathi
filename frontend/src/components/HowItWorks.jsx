@@ -38,7 +38,7 @@ export default function HowItWorks() {
   ]
 
   return (
-    <section className="bg-cream py-24 px-6 overflow-hidden">
+    <section className="py-24 px-6 overflow-hidden" style={{ backgroundColor: '#FAF9F6' }}>
       {/* Section Header */}
       <div className="text-center mb-20 max-w-3xl mx-auto">
         <p className="font-garamond text-xs uppercase tracking-widest text-terracotta mb-3">
@@ -47,7 +47,7 @@ export default function HowItWorks() {
         <h2 className="font-playfair text-4xl md:text-5xl text-charcoal font-bold">
           Your trip, from landing
           <br />
-          <span className="italic text-saffron">to lasting memory.</span>
+          <span className="italic font-bold" style={{ color: '#1033a6' }}>to lasting memory.</span>
         </h2>
         <p className="font-garamond text-lg text-charcoal/60 max-w-xl mx-auto text-center mt-4">
           Three simple steps that keep you safe, planned, and connected.

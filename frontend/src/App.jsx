@@ -17,7 +17,7 @@ import { FiAlertCircle } from 'react-icons/fi'
 
 function HomePage() {
   return (
-    <div className="bg-cream font-garamond page-fade-in">
+    <div className="font-garamond page-fade-in" style={{ backgroundColor: '#FAF9F6' }}>
       <Navbar />
       <div>
         <div id="home">

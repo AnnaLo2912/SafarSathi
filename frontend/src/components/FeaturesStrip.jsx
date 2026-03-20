@@ -1,81 +1,68 @@
-import { FiAlertCircle, FiMap, FiCreditCard, FiUser } from 'react-icons/fi'
-
 export default function FeaturesStrip() {
   const features = [
     {
       number: '01',
-      icon: <FiAlertCircle size={28} />,
       title: 'Panic in 98ms',
-      description:
-        'Triple-press your power button. GPS broadcasts instantly to every verified guide within 1km. No login. No delay.',
-      delay: '0ms',
+      desc: 'Triple-press your power button. GPS broadcasts instantly to every verified guide within 1km. No login. No delay.',
     },
     {
       number: '02',
-      icon: <FiMap size={28} />,
       title: 'AI Itineraries',
-      description:
-        "Type 'Jaipur 3 nights $150' and get a complete day-wise plan with hotels, timings, photos, and budget breakdown.",
-      delay: '100ms',
+      desc: "Type 'Jaipur 3 nights $150' and get a complete day-wise plan with hotels, timings, photos, and budget breakdown.",
     },
     {
       number: '03',
-      icon: <FiCreditCard size={28} />,
       title: 'Dual Currency',
-      description:
-        'Pay hotels in USD via Stripe. Top up INR wallet via Razorpay. Scan UPI QR codes for street food in seconds.',
-      delay: '200ms',
+      desc: 'Pay hotels in USD via Stripe. Top up INR wallet via Razorpay. Scan UPI QR codes for street food in seconds.',
     },
     {
       number: '04',
-      icon: <FiUser size={28} />,
       title: 'Verified Guides',
-      description:
-        'Every guide is government-certified with OCR verification. Live tracking, chat, and earnings dashboard included.',
-      delay: '300ms',
+      desc: 'Every guide is government-certified with OCR verification. Live tracking, chat, and earnings dashboard included.',
     },
   ]
 
   return (
-    <section className="bg-sand py-20 px-6">
-      {/* Section Header */}
-      <div className="text-center mb-16 max-w-4xl mx-auto">
-        <p className="font-garamond text-xs uppercase tracking-widest text-terracotta mb-3">
-          ✦ What SafarSathi Does
-        </p>
-        <h2 className="font-playfair text-4xl md:text-5xl text-charcoal font-bold">
-          Everything you need,{' '}
-          <span className="italic text-saffron">nothing you don't.</span>
-        </h2>
-      </div>
+    <section className="py-8" style={{ backgroundColor: '#FAF9F6' }}>
+      <div className="w-full rounded-t-[5rem] px-12 py-10" style={{ backgroundColor: '#1033a6' }}>
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <p className="font-garamond text-xs uppercase tracking-widest text-white/70 mb-4">
+            ✦ What SafarSathi Does
+          </p>
+          <h2 className="font-playfair text-4xl md:text-5xl text-white font-bold">
+            Everything you need,
+          </h2>
+          <h2 className="font-playfair text-4xl md:text-5xl text-white italic font-bold">
+            nothing you don't.
+          </h2>
+        </div>
 
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
-        {features.map((feature, index) => (
-          <div
-            key={index}
-            className="fade-up border-r border-sand/60 last:border-r-0 px-8 py-10 group cursor-pointer border-l-4 border-l-transparent hover:border-l-terracotta transition-all duration-300 bg-cream hover:bg-white transition-colors duration-300"
-            style={{ animationDelay: feature.delay }}
-          >
-            {/* Number */}
-            <p className="font-playfair text-7xl font-bold text-charcoal/10 leading-none mb-4 group-hover:text-terracotta/20 transition-colors">
-              {feature.number}
-            </p>
+        {/* Features Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+          {features.map((feature, index) => (
+            <div
+              key={index}
+              className="flex flex-col items-center text-center group cursor-pointer"
+              style={{ backgroundColor: 'rgb(255, 252, 153)', borderRadius: '1rem', padding: '1.5rem' }}
+            >
+              {/* Number */}
+              <p className="font-playfair text-6xl md:text-7xl font-bold leading-none mb-4 transition-colors duration-300" style={{ color: '#2C2C2C' }}>
+                {feature.number}
+              </p>
 
-            {/* Icon + Title */}
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-2xl">{feature.icon}</span>
-              <h3 className="font-playfair text-xl text-charcoal font-semibold">
+              {/* Title */}
+              <h3 className="font-playfair text-lg font-semibold mb-3 transition-colors duration-300" style={{ color: '#2C2C2C' }}>
                 {feature.title}
               </h3>
-            </div>
 
-            {/* Description */}
-            <p className="font-garamond text-base text-charcoal/70 leading-relaxed">
-              {feature.description}
-            </p>
-          </div>
-        ))}
+              {/* Description */}
+              <p className="font-garamond text-sm leading-relaxed transition-colors duration-300" style={{ color: '#2C2C2C' }}>
+                {feature.desc}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

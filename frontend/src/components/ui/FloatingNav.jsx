@@ -46,7 +46,7 @@ export const FloatingNav = ({ navItems, className }) => {
     >
       <div 
         className="flex items-center justify-center gap-2 rounded-full border border-sand/60 px-2 py-1.5 shadow-lg shadow-black/5 backdrop-blur-md"
-        style={{ backgroundColor: 'rgb(15, 43, 6)' }}
+        style={{ backgroundColor: 'rgb(53, 54, 53)' }}
       >
         {navItems.map((navItem, idx) => (
           <a

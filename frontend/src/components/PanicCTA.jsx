@@ -10,7 +10,7 @@ export default function PanicCTA() {
   }
 
   return (
-    <section className="bg-deepblue py-24 px-6 overflow-hidden relative">
+    <section className="py-24 px-6 overflow-hidden relative" style={{ backgroundColor: '#1033a6' }}>
       {/* Radial Gradient Overlay */}
       <div
         className="absolute inset-0 pointer-events-none"

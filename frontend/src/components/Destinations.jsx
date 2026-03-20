@@ -57,7 +57,7 @@ export default function Destinations() {
   ]
 
   return (
-    <section className="bg-sand py-24 px-6">
+    <section className="py-24 px-6" style={{ backgroundColor: '#FAF9F6' }}>
       {/* Section Header */}
       <div className="text-center mb-16 max-w-3xl mx-auto">
         <p className="font-garamond text-xs uppercase tracking-widest text-terracotta mb-3">
