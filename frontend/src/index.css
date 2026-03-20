@@ -2,6 +2,11 @@
 @import '@fontsource/eb-garamond';
 @import 'tailwindcss';
 
+:root {
+  --font-playfair: 'Playfair Display', serif;
+  --font-garamond: 'EB Garamond', serif;
+}
+
 @theme {
   --color-cream: #F5EFE6;
   --color-coral: #D96C54;
