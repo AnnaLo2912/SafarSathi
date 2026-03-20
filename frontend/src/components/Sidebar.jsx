@@ -17,12 +17,12 @@ export default function Sidebar({ tabs, activeTab, setActiveTab, isDashboard = '
     <>
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-0 h-full z-50 bg-cream border-r border-sand transition-all duration-300 flex flex-col ${
+        className={`fixed left-0 top-0 h-full z-50 bg-[#F5EFE6] border border-coral/35 shadow-[6px_0_24px_rgba(44,44,44,0.08)] transition-all duration-300 flex flex-col ${
           isOpen ? 'w-64' : 'w-20'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-6 border-b border-sand">
+        <div className="flex items-center justify-between px-4 py-6 border-b border-coral/20">
           {isOpen && (
             <div className="flex flex-col">
               <h1 className="font-playfair text-lg font-bold text-charcoal">
@@ -61,7 +61,7 @@ export default function Sidebar({ tabs, activeTab, setActiveTab, isDashboard = '
         </nav>
 
         {/* Footer - Logout Button */}
-        <div className="border-t border-sand p-3">
+        <div className="border-t border-coral/20 p-3">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-4 px-4 py-3 rounded-lg font-garamond text-sm text-charcoal hover:bg-sand/50 transition-colors"

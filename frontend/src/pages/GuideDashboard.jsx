@@ -36,41 +36,6 @@ export default function GuideDashboard() {
       {/* Main Content */}
       <div className="md:ml-64 ml-20 transition-all duration-300 p-6 md:p-10">
         <div className="max-w-6xl mx-auto">
-          {/* Top Info Bar */}
-          <div className="hidden md:flex items-center justify-between mb-8 pb-6 border-b border-sand">
-            <div className="flex items-center gap-4">
-              <div className="font-playfair text-2xl font-bold text-charcoal">
-                {userProfile?.name || 'Guide'}
-              </div>
-              <span className={`font-garamond text-xs px-3 py-1.5 rounded-full ${
-                userProfile?.certificateStatus === 'approved'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-amber-100 text-amber-700'
-              }`}>
-                {userProfile?.certificateStatus === 'approved' ? '✓ Verified' : '⏳ Pending'}
-              </span>
-            </div>
-
-            {/* Availability Toggle */}
-            <div className="flex items-center gap-3">
-              <span className="font-garamond text-xs text-charcoal/60 uppercase tracking-wider">
-                {available ? 'Online' : 'Offline'}
-              </span>
-              <button
-                onClick={() => setAvailable(!available)}
-                className={`w-10 h-5 rounded-full relative transition-all duration-300 ${
-                  available ? 'bg-green-500' : 'bg-charcoal/20'
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${
-                    available ? 'left-5' : 'left-0.5'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
           {/* Content Area */}
           <div className="pb-24 md:pb-10">
             {activeTab === 'overview' && <GuideOverview available={available} setAvailable={setAvailable} />}

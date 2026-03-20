@@ -2,6 +2,22 @@
 @import '@fontsource/eb-garamond';
 @import 'tailwindcss';
 
+@theme {
+  --color-cream: #F5EFE6;
+  --color-coral: #D96C54;
+  --color-rain: #A8B2AE;
+  --color-peach: #E8B7A6;
+  --color-latte: #C89B7B;
+  --color-eucalyptus: #8A9A8A;
+  --color-sand: #F5F0E8;
+  --color-terracotta: #C84B31;
+  --color-saffron: #E8B7A6;
+  --color-deepblue: #1B3A5C;
+  --color-charcoal: #2C2C2C;
+  --font-playfair: 'Playfair Display', serif;
+  --font-garamond: 'EB Garamond', serif;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -35,7 +51,7 @@ html {
 }
 
 ::selection {
-  background-color: #E8892B;
+  background-color: #E8B7A6;
   color: #FAF7F2;
 }
 
@@ -48,7 +64,7 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #E8892B;
+  background: #E8B7A6;
   border-radius: 3px;
 }
 

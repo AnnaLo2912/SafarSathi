@@ -1,38 +1,34 @@
 import { useState } from 'react'
-import { FiDollarSign, FiPackage, FiMapPin, FiShield, FiZap } from 'react-icons/fi'
+import { FiDollarSign, FiPackage, FiMapPin, FiShield, FiZap, FiClock, FiMessageCircle, FiCalendar, FiTrendingUp } from 'react-icons/fi'
 
 const stats = [
   {
-    label: "This Week",
+    label: "Earnings",
     value: "₹6,000",
-    sub: "3 trips completed",
-    icon: "dollar",
-    color: "bg-saffron",
-    trend: "+12% vs last week"
+    sub: "This week",
+    icon: <FiDollarSign size={20} />,
+    color: "text-saffron"
   },
   {
     label: "Active Tourists",
     value: "3",
-    sub: "On trip right now",
-    icon: "package",
-    color: "bg-deepblue",
-    trend: "2 more upcoming"
+    sub: "On trip now",
+    icon: <FiPackage size={20} />,
+    color: "text-deepblue"
   },
   {
-    label: "Response Rate",
+    label: "Response Time",
     value: "98ms",
-    sub: "Panic alert speed",
-    icon: "zap",
-    color: "bg-terracotta",
-    trend: "Top 5% of guides"
+    sub: "Avg. response",
+    icon: <FiZap size={20} />,
+    color: "text-terracotta"
   },
   {
-    label: "Your Rating",
+    label: "Rating",
     value: "4.9",
     sub: "From 127 reviews",
-    icon: "⭐",
-    color: "bg-green-600",
-    trend: "↑ 0.1 this month"
+    icon: <FiTrendingUp size={20} />,
+    color: "text-green-600"
   }
 ]
 
@@ -40,10 +36,10 @@ const upcomingBookings = [
   {
     id: 1,
     tourist: "Sarah Mitchell",
-    country: "🇺🇸 USA",
+    country: "USA",
     avatar: "S",
     avatarBg: "bg-saffron",
-    date: "Today — Mar 19",
+    date: "Today",
     time: "7:30 AM",
     location: "Amber Fort, Jaipur",
     duration: "Full Day",
@@ -54,10 +50,10 @@ const upcomingBookings = [
   {
     id: 2,
     tourist: "James Whitfield",
-    country: "🇬🇧 UK",
+    country: "UK",
     avatar: "J",
     avatarBg: "bg-deepblue",
-    date: "Tomorrow — Mar 20",
+    date: "Tomorrow",
     time: "9:00 AM",
     location: "City Palace + Hawa Mahal",
     duration: "Half Day",
@@ -68,7 +64,7 @@ const upcomingBookings = [
   {
     id: 3,
     tourist: "Yuki Tanaka",
-    country: "🇯🇵 Japan",
+    country: "Japan",
     avatar: "Y",
     avatarBg: "bg-terracotta",
     date: "Mar 22",
@@ -84,17 +80,13 @@ const upcomingBookings = [
 const recentReviews = [
   {
     tourist: "Emma R.",
-    country: "🇩🇪",
     rating: 5,
-    text: "Rajesh was absolutely wonderful! His knowledge of Jaipur's history is unmatched. Highly recommend!",
-    date: "Mar 17"
+    text: "Absolutely wonderful! Knowledge of history is unmatched."
   },
   {
     tourist: "Carlos M.",
-    country: "🇧🇷",
     rating: 5,
-    text: "Best guide experience in India. Took us to hidden gems we would never have found alone.",
-    date: "Mar 14"
+    text: "Best guide experience. Hidden gems we'd never find alone."
   }
 ]
 
@@ -107,107 +99,172 @@ function getStatIcon(iconName) {
   return iconMap[iconName] || null
 }
 
-function getActionIcon(iconName) {
-  const iconMap = {
-    'calendar': <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v2h16V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5H2v8a2 2 0 002 2h12a2 2 0 002-2V7H6z"/></svg>,
-    'chat': <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/></svg>,
-    'map-pin': <FiMapPin size={24} />,
-    'dollar-sign': <FiDollarSign size={24} />
-  }
-  return iconMap[iconName] || null
-}
-
 export default function GuideOverview({ available, setAvailable }) {
+  const nextBooking = upcomingBookings[0]
+
   return (
     <div className="page-fade-in">
-      {/* HEADER ROW */}
-      <div className="flex items-start justify-between mb-10 flex-wrap gap-4">
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* 1. HEADER */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex items-center justify-between mb-12 gap-6 flex-wrap">
         <div>
-          <p className="font-garamond text-xs uppercase tracking-widest text-terracotta mb-2">
-            ✦ Guide Dashboard
+          <p className="font-garamond text-xs uppercase tracking-widest text-rain mb-2">
+            Guide Control Center
           </p>
-          <h1 className="font-playfair text-4xl text-charcoal font-bold">
-            Good morning,
+          <h1 className="font-playfair text-3xl text-charcoal font-bold">
+            Good morning, Rajesh
           </h1>
-          <p className="font-playfair text-4xl text-saffron italic font-bold">
-            Rajesh. 🙏
-          </p>
         </div>
 
-        {/* Availability Card */}
-        <div className="bg-sand rounded-2xl px-6 py-4 flex items-center gap-4">
+        {/* Online/Offline Toggle */}
+        <div className="flex items-center gap-4 bg-cream border border-coral rounded-2xl px-5 py-3 shadow-sm">
           <div>
-            <p className="font-playfair text-base text-charcoal font-semibold">
-              {available ? "You're Available" : "You're Offline"}
+            <p className="font-garamond text-xs uppercase tracking-wider text-charcoal/70">
+              Status
             </p>
-            <p className="font-garamond text-xs text-charcoal/50 mt-0.5">
-              {available 
-                ? "Tourists can book you now" 
-                : "You won't receive new bookings"}
+            <p className="font-playfair text-base font-semibold text-charcoal mt-0.5">
+              {available ? "🟢 Online" : "⚪ Offline"}
             </p>
           </div>
-
-          {/* Toggle */}
           <button
             onClick={() => setAvailable(!available)}
-            className={`w-14 h-7 rounded-full relative transition-all duration-300 ${
+            className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${
               available ? "bg-green-500" : "bg-charcoal/20"
             }`}
           >
             <div
-              className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
-                available ? "left-8" : "left-1"
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${
+                available ? "left-7" : "left-1"
               }`}
             />
           </button>
         </div>
       </div>
 
-      {/* STATS GRID */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-sand rounded-3xl p-6 relative overflow-hidden hover:shadow-lg transition-all duration-300"
-          >
-            <div
-              className={`absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 ${stat.color}`}
-            />
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* 2. PRIMARY ACTION PANEL - NEXT BOOKING (MOST IMPORTANT) */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <div className="bg-cream border-2 border-coral rounded-2xl p-6 mb-8 shadow-md">
+        <p className="font-garamond text-xs uppercase tracking-widest text-coral mb-3">
+          ▸ Next Booking
+        </p>
 
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl ${stat.color}`}>
-                {getStatIcon(stat.icon)}
+        {nextBooking ? (
+          <div className="space-y-4">
+            {/* Tourist & Location */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-playfair text-xl text-charcoal font-bold">
+                  {nextBooking.tourist}
+                </p>
+                <p className="font-garamond text-sm text-charcoal/60 mt-0.5">
+                  {nextBooking.country}
+                </p>
               </div>
-              <p className="font-garamond text-xs text-charcoal/40 uppercase tracking-wider">
-                {stat.label}
-              </p>
+              <span className={`font-garamond text-xs px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 ${nextBooking.statusColor}`}>
+                ✓ Confirmed
+              </span>
             </div>
 
-            <p className="font-playfair text-4xl text-charcoal font-bold mb-1">
+            {/* Location & Time */}
+            <div className="bg-cream rounded-xl p-3 space-y-2">
+              <div className="flex items-start gap-3">
+                <FiMapPin size={16} className="text-coral mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-garamond text-xs text-charcoal/50 uppercase tracking-wider">
+                    Location
+                  </p>
+                  <p className="font-playfair text-sm text-charcoal font-semibold mt-0.5">
+                    {nextBooking.location}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <FiClock size={16} className="text-coral mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-garamond text-xs text-charcoal/50 uppercase tracking-wider">
+                    Time
+                  </p>
+                  <p className="font-playfair text-sm text-charcoal font-semibold mt-0.5">
+                    {nextBooking.date} at {nextBooking.time}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Amount & Duration */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-cream rounded-xl p-3 text-center">
+                <p className="font-garamond text-xs text-charcoal/50 uppercase tracking-wider mb-1">
+                  Duration
+                </p>
+                <p className="font-playfair text-base text-charcoal font-bold">
+                  {nextBooking.duration}
+                </p>
+              </div>
+              <div className="bg-cream rounded-xl p-3 text-center">
+                <p className="font-garamond text-xs text-charcoal/50 uppercase tracking-wider mb-1">
+                  Amount
+                </p>
+                <p className="font-playfair text-base text-charcoal font-bold text-saffron">
+                  {nextBooking.amount}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button className="bg-coral text-white font-garamond text-xs font-semibold py-2.5 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+                <FiMessageCircle size={14} /> Chat
+              </button>
+              <button className="border border-coral text-coral font-garamond text-xs font-semibold py-2.5 rounded-lg hover:bg-coral/5 transition-colors flex items-center justify-center gap-2">
+                <FiMapPin size={14} /> Route
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <p className="font-garamond text-charcoal/60">No upcoming bookings</p>
+          </div>
+        )}
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* 3. KEY STATS ROW - 4 Equal Cards */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        {stats.map((stat, idx) => (
+          <div key={idx} className="bg-cream border border-coral rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`${stat.color} mb-4`}>{stat.icon}</div>
+            <p className="font-garamond text-xs uppercase tracking-wider text-charcoal/60 mb-2">
+              {stat.label}
+            </p>
+            <p className="font-playfair text-2xl text-charcoal font-bold mb-1">
               {stat.value}
             </p>
-            <p className="font-garamond text-sm text-charcoal/60 mb-3">
+            <p className="font-garamond text-xs text-charcoal/50">
               {stat.sub}
-            </p>
-            <p className="font-garamond text-xs text-green-600 flex items-center gap-1">
-              ↑ {stat.trend}
             </p>
           </div>
         ))}
       </div>
 
-      {/* TWO COLUMN LAYOUT */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* 4. MAIN CONTENT - 2 Column Layout (70% / 30%) */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT COLUMN */}
-        <div className="lg:col-span-2">
+        {/* LEFT COLUMN - 70% */}
+        <div className="lg:col-span-2 space-y-10">
           {/* UPCOMING BOOKINGS */}
-          <div className="mb-10">
+          <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-playfair text-2xl text-charcoal font-bold">
-                Upcoming Bookings
+                All Bookings
               </h2>
-              <span className="bg-saffron/20 text-saffron font-garamond text-xs px-3 py-1 rounded-full">
-                {upcomingBookings.length} scheduled
+              <span className="font-garamond text-xs text-charcoal/50 bg-cream px-3 py-1.5 rounded-full">
+                {upcomingBookings.length} total
               </span>
             </div>
 
@@ -215,160 +272,142 @@ export default function GuideOverview({ available, setAvailable }) {
               {upcomingBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="bg-sand rounded-2xl p-5 border border-sand hover:border-saffron/30 transition-all duration-300 flex items-center gap-4 flex-wrap md:flex-nowrap"
+                  className="bg-cream border border-coral rounded-2xl p-5 hover:border-coral/80 hover:shadow-md transition-all"
                 >
-                  {/* Avatar */}
-                  <div
-                    className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-white font-playfair font-bold text-lg ${booking.avatarBg}`}
-                  >
-                    {booking.avatar}
-                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Avatar & Tourist Info */}
+                    <div className="flex items-start gap-4 flex-1">
+                      <div
+                        className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-white font-playfair font-bold text-lg ${booking.avatarBg}`}
+                      >
+                        {booking.avatar}
+                      </div>
 
-                  {/* Tourist Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-playfair text-base text-charcoal font-semibold">
-                        {booking.tourist}
-                      </p>
-                      <p className="font-garamond text-xs text-charcoal/50">
-                        {booking.country}
-                      </p>
-                    </div>
-                      <p className="font-garamond text-sm text-charcoal/60 mt-0.5 flex items-center gap-2">
-                        <FiMapPin size={14} /> {booking.location}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <p className="font-garamond text-xs text-charcoal/50">
-                        📅 {booking.date} · {booking.time}
-                      </p>
-                      <span>·</span>
-                      <p className="font-garamond text-xs text-charcoal/50">
-                        {booking.duration}
-                      </p>
-                    </div>
-                  </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-playfair text-base text-charcoal font-semibold">
+                            {booking.tourist}
+                          </p>
+                          <p className="font-garamond text-xs text-charcoal/50">
+                            ({booking.country})
+                          </p>
+                        </div>
 
-                  {/* Right Side */}
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <p className="font-playfair text-lg text-charcoal font-bold">
-                      {booking.amount}
-                    </p>
-                    <span className={`font-garamond text-xs px-3 py-1 rounded-full ${booking.statusColor}`}>
-                      {booking.status === "confirmed" ? "✓ Confirmed" : "⏳ Pending"}
-                    </span>
-                    <p className="font-garamond text-xs text-charcoal/40 cursor-pointer hover:text-saffron transition-colors">
-                      View details →
-                    </p>
+                        <p className="font-garamond text-sm text-charcoal/70 mb-2 flex items-center gap-2">
+                          <FiMapPin size={14} className="text-charcoal/50" />
+                          {booking.location}
+                        </p>
+
+                        <div className="flex items-center gap-3 text-xs text-charcoal/60 font-garamond">
+                          <span>{booking.date}</span>
+                          <span className="text-charcoal/30">·</span>
+                          <span>{booking.time}</span>
+                          <span className="text-charcoal/30">·</span>
+                          <span>{booking.duration}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Amount & Status */}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <p className="font-playfair text-lg text-charcoal font-bold">
+                        {booking.amount}
+                      </p>
+                      <span className={`font-garamond text-xs px-2.5 py-1.5 rounded-lg whitespace-nowrap ${booking.statusColor}`}>
+                        {booking.status === "confirmed" ? "Confirmed" : "Pending"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* QUICK ACTIONS */}
-          <div>
-            <h2 className="font-playfair text-2xl text-charcoal font-bold mb-4">
-              Quick Actions
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { emoji: "📅", label: "View Calendar" },
-                { emoji: "💬", label: "Open Chats" },
-                { emoji: "📍", label: "Tourist Map" },
-                { emoji: "💰", label: "Earnings" }
-              ].map((action, idx) => (
-                <button
-                  key={idx}
-                  className="bg-sand rounded-2xl p-4 text-center cursor-pointer border border-sand hover:border-saffron/40 hover:shadow-md transition-all duration-300"
-                >
-                  <p className="text-2xl mb-2 flex justify-center">{getActionIcon(action.emoji)}</p>
-                  <p className="font-garamond text-xs text-charcoal/70 uppercase tracking-wider">
-                    {action.label}
-                  </p>
-                </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="lg:col-span-1">
-          {/* PANIC ALERT PREVIEW */}
-          <div className="bg-deepblue rounded-3xl p-6 mb-6 relative overflow-hidden">
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(circle at 80% 20%, rgba(200,75,49,0.3) 0%, transparent 60%)"
-              }}
-            />
+        {/* RIGHT COLUMN - 30% (SIDEBAR) */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* ALERTS CARD */}
+          <div className="bg-cream border border-coral rounded-2xl p-6 shadow-sm">
+            <h3 className="font-playfair text-lg text-charcoal font-bold mb-4">
+              Safety Status
+            </h3>
 
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-playfair text-lg text-white font-semibold">
-                  Panic Alerts
-                </h3>
-                <span className="bg-green-500/20 text-green-400 font-garamond text-xs px-3 py-1 rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  Monitoring
-                </span>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+              <div className="flex justify-center mb-3">
+                <FiShield size={32} className="text-green-600" />
               </div>
+              <p className="font-playfair text-base text-charcoal font-semibold mb-1">
+                All Clear
+              </p>
+              <p className="font-garamond text-xs text-charcoal/60">
+                No panic alerts in your area
+              </p>
+            </div>
 
-              {/* No Alerts State */}
-              <div className="text-center py-6">
-                <div className="flex justify-center mb-3">
-                  <FiShield size={40} />
-                </div>
-                <p className="font-playfair text-base text-white/80 mb-1">All Clear</p>
-                <p className="font-garamond text-sm text-white/50">
-                  No panic alerts in your area. You'll be notified instantly if a
-                  tourist needs help.
-                </p>
-              </div>
-
-              {/* Alert Radius */}
-              <div className="bg-white/10 rounded-xl px-4 py-3 mt-4 flex items-center justify-between">
-                <p className="font-garamond text-xs text-white/60">Alert radius</p>
-                <p className="font-playfair text-base text-white font-semibold">1 km</p>
-              </div>
+            <div className="mt-4 bg-white rounded-xl p-3 flex items-center justify-between">
+              <p className="font-garamond text-xs text-charcoal/60">Alert Radius</p>
+              <p className="font-playfair font-semibold text-charcoal">1 km</p>
             </div>
           </div>
 
           {/* RECENT REVIEWS */}
-          <div className="bg-sand rounded-3xl p-6">
-            <h3 className="font-playfair text-lg text-charcoal font-semibold mb-5">
+          <div className="bg-cream border border-coral rounded-2xl p-6 shadow-sm">
+            <h3 className="font-playfair text-lg text-charcoal font-bold mb-4">
               Recent Reviews
             </h3>
 
             <div className="space-y-4">
               {recentReviews.map((review, idx) => (
-                <div key={idx} className="bg-cream rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <p className="font-playfair text-sm text-charcoal font-semibold">
-                        {review.tourist} {review.country}
-                      </p>
-                    </div>
-                    <p className="font-garamond text-xs text-charcoal/40">
-                      {review.date}
+                <div key={idx} className="bg-white rounded-xl p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="font-playfair text-sm text-charcoal font-semibold">
+                      {review.tourist}
+                    </p>
+                    <p className="text-xs text-saffron">
+                      {"⭐".repeat(review.rating)}
                     </p>
                   </div>
-                  <p className="font-garamond text-sm text-saffron mb-2">
-                    {"⭐".repeat(review.rating)}
-                  </p>
-                  <p className="font-garamond text-sm text-charcoal/70 italic leading-relaxed">
+                  <p className="font-garamond text-xs text-charcoal/70 leading-relaxed">
                     "{review.text}"
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="text-center mt-4">
-              <p className="font-garamond text-xs text-saffron uppercase tracking-wider cursor-pointer hover:text-terracotta transition-colors">
-                View all 127 reviews →
-              </p>
-            </div>
+            <button className="w-full mt-4 font-garamond text-xs text-coral hover:text-coral/80 transition-colors uppercase tracking-wider font-semibold">
+              View all 127 →
+            </button>
           </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* 5. QUICK ACTIONS - Bottom */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <div className="mt-16 pt-10 border-t border-coral">
+        <h3 className="font-playfair text-lg text-charcoal font-bold mb-6">
+          Quick Actions
+        </h3>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { icon: <FiCalendar size={24} />, label: "Calendar" },
+            { icon: <FiMessageCircle size={24} />, label: "Messages" },
+            { icon: <FiMapPin size={24} />, label: "Tourist Map" },
+            { icon: <FiDollarSign size={24} />, label: "Earnings" }
+          ].map((action, idx) => (
+            <button
+              key={idx}
+              className="bg-cream border border-coral rounded-2xl p-5 text-center hover:bg-coral hover:text-white hover:shadow-md transition-all group"
+            >
+              <div className="flex justify-center mb-3 text-coral group-hover:text-white transition-colors">
+                {action.icon}
+              </div>
+              <p className="font-garamond text-xs uppercase tracking-wider text-charcoal group-hover:text-white transition-colors">
+                {action.label}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
     </div>

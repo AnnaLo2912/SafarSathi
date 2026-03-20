@@ -64,7 +64,7 @@ export default function GuideNetwork() {
       </div>
 
       {/* Guides Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
         {guides.map((guide, index) => (
           <GuideCard key={index} guide={guide} />
         ))}
@@ -96,7 +96,7 @@ function GuideCard({ guide }) {
         className="absolute top-0 right-0 w-20 h-20 opacity-5 group-hover:opacity-10 transition-opacity duration-300"
         style={{
           background:
-            'radial-gradient(circle, #E8892B 0%, transparent 70%)',
+            'radial-gradient(circle, #E8B7A6 0%, transparent 70%)',
         }}
       />
 
