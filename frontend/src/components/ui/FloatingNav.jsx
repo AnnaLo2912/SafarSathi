@@ -44,12 +44,15 @@ export const FloatingNav = ({ navItems, className }) => {
         className
       )}
     >
-      <div className="flex items-center justify-center gap-2 rounded-full border border-sand/60 bg-cream/90 px-2 py-1.5 shadow-lg shadow-black/5 backdrop-blur-md">
+      <div 
+        className="flex items-center justify-center gap-2 rounded-full border border-sand/60 px-2 py-1.5 shadow-lg shadow-black/5 backdrop-blur-md"
+        style={{ backgroundColor: 'rgb(15, 43, 6)' }}
+      >
         {navItems.map((navItem, idx) => (
           <a
             key={`link=${idx}`}
             href={navItem.link}
-            className="relative flex items-center gap-1 rounded-full px-4 py-2 text-sm font-garamond text-charcoal/70 transition-colors hover:bg-sand hover:text-charcoal uppercase tracking-widest text-xs"
+            className="relative flex items-center gap-1 rounded-full px-4 py-2 text-sm font-bold font-serif text-white transition-colors hover:bg-sand hover:text-charcoal uppercase tracking-widest text-xs"
           >
             <span className="block sm:hidden">{navItem.icon}</span>
             <span className="hidden sm:block text-xs">{navItem.name}</span>
@@ -58,7 +61,7 @@ export const FloatingNav = ({ navItems, className }) => {
         <div className="h-5 w-px bg-sand" />
         <button 
           onClick={() => navigate('/login')}
-          className="relative rounded-full border border-charcoal text-charcoal px-4 py-2 text-xs font-garamond font-bold transition-all hover:bg-charcoal hover:text-cream uppercase tracking-wider"
+          className="relative rounded-full border border-charcoal text-charcoal font-bold font-serif px-4 py-2 text-xs transition-all bg-[rgb(255,252,153)] hover:bg-[rgb(255,252,204)] hover:text-charcoal uppercase tracking-wider"
         >
           Login
         </button>
