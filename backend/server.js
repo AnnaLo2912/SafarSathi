@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import tripRoutes from "./routes/trip.routes.js";
+import guideRoutes from "./routes/guide.routes.js";
+import bookingRoutes from "./routes/booking.routes.js";
 
 // Connect MongoDB
 connectDB();
@@ -33,6 +35,9 @@ app.get("/api/health", (req, res) => {
 
 // ── Routes ────────────────────────────────────────────────────
 app.use("/api/trips", tripRoutes);
+app.use("/api/guide", guideRoutes);
+app.use("/api/guides", guideRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use((req, res) => {

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
 import GuideOverview from '../components/guide/GuideOverview'
 import BookingsPanel from '../components/guide/BookingsPanel'
@@ -11,7 +10,6 @@ import { FiBarChart2, FiCalendar, FiAlertCircle, FiMapPin, FiMessageCircle, FiDo
 
 export default function GuideDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
-  const [available, setAvailable] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const tabs = [
@@ -23,8 +21,6 @@ export default function GuideDashboard() {
     { id: 'earnings', label: 'Earnings', icon: <FiDollarSign size={20} /> },
     { id: 'profile', label: 'Profile', icon: <FiUser size={20} /> }
   ]
-
-  const { userProfile } = useAuth()
 
   return (
     <div className="min-h-screen bg-cream">
@@ -41,7 +37,7 @@ export default function GuideDashboard() {
         <div className="w-full">
           {/* Content Area */}
           <div className="pb-24 md:pb-10">
-            {activeTab === 'overview' && <GuideOverview available={available} setAvailable={setAvailable} />}
+            {activeTab === 'overview' && <GuideOverview />}
             {activeTab === 'bookings' && <BookingsPanel />}
             {activeTab === 'alerts' && <PanicAlerts />}
             {activeTab === 'map' && (

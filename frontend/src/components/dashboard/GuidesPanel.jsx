@@ -1,438 +1,325 @@
-import { useState } from 'react'
-import { FiMapPin } from 'react-icons/fi'
+import { useEffect, useMemo, useState } from 'react'
+import { FiClock, FiMapPin, FiMessageCircle, FiStar } from 'react-icons/fi'
+import { useAuth } from '../../context/AuthContext'
+import {
+  createBookingRequest,
+  getAvailableGuides,
+  getBookings,
+} from '../../services/bookingService'
+
+const statusStyles = {
+  pending: 'bg-amber-100 text-amber-700',
+  confirmed: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
+  completed: 'bg-gray-100 text-gray-700',
+}
+
+const initialForm = {
+  date: '',
+  time: '',
+  duration: '',
+  location: '',
+  notes: '',
+}
+
+function BookingCard({ booking }) {
+  return (
+    <article className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="font-playfair text-lg text-charcoal">{booking.guideName}</h4>
+        <span className={`px-3 py-1 rounded-full text-xs uppercase tracking-wide font-garamond ${statusStyles[booking.status]}`}>
+          {booking.status}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1 text-sm font-garamond text-charcoal/70">
+        <p className="flex items-center gap-2">
+          <FiClock size={14} /> {booking.date} at {booking.time}
+        </p>
+        <p className="flex items-center gap-2">
+          <FiMapPin size={14} /> {booking.location}
+        </p>
+        <p>Duration: {booking.duration}</p>
+        <p>Price: INR {booking.price}</p>
+      </div>
+
+      {booking.status === 'pending' ? (
+        <p className="mt-3 text-sm text-amber-700 font-garamond">Waiting for guide confirmation</p>
+      ) : null}
+      {booking.status === 'rejected' ? (
+        <p className="mt-3 text-sm text-red-600 font-garamond">Request declined</p>
+      ) : null}
+      {booking.status === 'confirmed' ? (
+        <button className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-charcoal text-white text-sm">
+          <FiMessageCircle size={14} /> Open Chat
+        </button>
+      ) : null}
+    </article>
+  )
+}
 
 export default function GuidesPanel() {
-  const [activeGuide, setActiveGuide] = useState(null)
-  const [chatOpen, setChatOpen] = useState(false)
-  const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'guide',
-      text: 'Namaste! I am Rajesh, your verified guide for Jaipur. How can I help you plan your visit?',
-      time: '10:00 AM'
-    },
-    {
-      id: 2,
-      sender: 'tourist',
-      text: 'Hi Rajesh! I want to visit Amber Fort tomorrow morning. What time should we meet?',
-      time: '10:02 AM'
-    },
-    {
-      id: 3,
-      sender: 'guide',
-      text: 'Perfect choice! I suggest we meet at 7:30 AM at the fort entrance. Early morning is less crowded and the light is beautiful for photos.',
-      time: '10:03 AM'
-    },
-    {
-      id: 4,
-      sender: 'tourist',
-      text: 'That sounds great! Should I book elephants for the ride up?',
-      time: '10:05 AM'
-    },
-    {
-      id: 5,
-      sender: 'guide',
-      text: 'I would recommend the jeep instead — more comfortable and better for the environment. I can arrange it for ₹300. Shall I book it for us?',
-      time: '10:06 AM'
-    }
-  ])
+  const { userProfile } = useAuth()
+  const [guides, setGuides] = useState([])
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [selectedGuide, setSelectedGuide] = useState(null)
+  const [form, setForm] = useState(initialForm)
+  const [submitting, setSubmitting] = useState(false)
 
-  const bookedGuides = [
-    {
-      id: 1,
-      name: 'Rajesh Kumar',
-      location: 'Jaipur, Rajasthan',
-      license: 'License #RJ1234',
-      rating: '4.9',
-      reviews: 127,
-      avatar: 'R',
-      avatarBg: 'bg-saffron',
-      status: 'active',
-      statusLabel: 'On Your Trip',
-      statusColor: 'bg-green-100 text-green-700',
-      tripDate: 'Today — Mar 19',
-      tripDuration: '3 days',
-      totalPaid: '₹6,000',
-      speciality: 'Heritage & Forts',
-      languages: ['English', 'Hindi', 'French'],
-      phone: '+91 98765 43210',
-      nextMeeting: 'Tomorrow, 7:30 AM — Amber Fort',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80'
-    },
-    {
-      id: 2,
-      name: 'Priya Nair',
-      location: 'Kochi, Kerala',
-      license: 'License #KL5678',
-      rating: '4.8',
-      reviews: 89,
-      avatar: 'P',
-      avatarBg: 'bg-deepblue',
-      status: 'upcoming',
-      statusLabel: 'Upcoming',
-      statusColor: 'bg-blue-100 text-blue-700',
-      tripDate: 'Mar 25 — Mar 30',
-      tripDuration: '5 days',
-      totalPaid: '₹9,000',
-      speciality: 'Backwaters & Culture',
-      languages: ['English', 'Malayalam', 'German'],
-      phone: '+91 87654 32109',
-      nextMeeting: 'Mar 25, 9:00 AM — Kochi Airport',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80'
-    }
-  ]
+  useEffect(() => {
+    loadData()
+  }, [])
 
-  const availableGuides = [
-    {
-      id: 3,
-      name: 'Arjun Sharma',
-      location: 'Varanasi, UP',
-      license: 'License #UP9012',
-      rating: '5.0',
-      reviews: 64,
-      avatar: 'A',
-      avatarBg: 'bg-terracotta',
-      available: true,
-      rate: '₹1,500/day',
-      speciality: 'Spiritual & Ghats',
-      languages: ['English', 'Hindi', 'Spanish'],
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&q=80'
-    },
-    {
-      id: 4,
-      name: 'Meera Pillai',
-      location: 'Agra, UP',
-      license: 'License #UP3456',
-      rating: '4.7',
-      reviews: 43,
-      avatar: 'M',
-      avatarBg: 'bg-deepblue',
-      available: true,
-      rate: '₹1,800/day',
-      speciality: 'Mughal Heritage',
-      languages: ['English', 'Hindi', 'Japanese'],
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80'
-    }
-  ]
-
-  function sendMessage() {
-    if (!message.trim()) return
-    const newMsg = {
-      id: messages.length + 1,
-      sender: 'tourist',
-      text: message,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-    setMessages([...messages, newMsg])
-    setMessage('')
-
-    // Mock guide reply after 1.5s
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: prev.length + 1,
-          sender: 'guide',
-          text: 'Got your message! I will get back to you shortly. Thanks!',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
+  async function loadData() {
+    try {
+      setLoading(true)
+      setError('')
+      const [guidesData, bookingsData] = await Promise.all([
+        getAvailableGuides(),
+        getBookings('tourist'),
       ])
-    }, 1500)
+      setGuides(guidesData.guides || [])
+      setBookings(bookingsData.bookings || [])
+    } catch (err) {
+      setError(err.message || 'Unable to load guides or bookings')
+    } finally {
+      setLoading(false)
+    }
   }
 
+  function openBookingForm(guide) {
+    setSelectedGuide(guide)
+    setForm(initialForm)
+  }
+
+  function closeBookingForm() {
+    setSelectedGuide(null)
+    setForm(initialForm)
+  }
+
+  function onFormChange(event) {
+    const { name, value } = event.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  async function submitBooking(event) {
+    event.preventDefault()
+
+    if (!selectedGuide) return
+
+    try {
+      setSubmitting(true)
+      setError('')
+      await createBookingRequest({
+        guide_id: selectedGuide.user_id,
+        guideName: selectedGuide.name,
+        touristName: userProfile?.name || 'Tourist',
+        date: form.date,
+        time: form.time,
+        duration: form.duration,
+        location: form.location,
+        notes: form.notes,
+        price: Number(selectedGuide.price) || 1500,
+      })
+
+      closeBookingForm()
+      await loadData()
+    } catch (err) {
+      setError(err.message || 'Could not create booking request')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const pendingBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === 'pending'),
+    [bookings]
+  )
+  const confirmedBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === 'confirmed'),
+    [bookings]
+  )
+  const rejectedBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === 'rejected'),
+    [bookings]
+  )
+  const completedBookings = useMemo(
+    () => bookings.filter((booking) => booking.status === 'completed'),
+    [bookings]
+  )
+
   return (
-    <div className="page-fade-in">
-      {/* SECTION HEADER */}
-      <div className="mb-10">
-        <div className="font-garamond text-xs uppercase tracking-widest text-terracotta mb-2">
-          ✦ Your Guide Network
-        </div>
-        <h1 className="font-playfair text-4xl text-charcoal font-bold mb-1">
-          Travel with
-        </h1>
-        <h1 className="font-playfair text-4xl text-saffron italic font-bold">
-          trusted hands.
-        </h1>
-      </div>
+    <div className="space-y-8">
+      <section className="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
+        <h2 className="font-playfair text-3xl text-charcoal font-semibold">Find Guides</h2>
+        <p className="font-garamond text-charcoal/60 mt-1">
+          Showing only guides with availability ON.
+        </p>
 
-      {/* MAIN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT + CENTER (lg:col-span-2) */}
-        <div className="lg:col-span-2">
-          {/* MY BOOKED GUIDES */}
-          <div className="mb-8">
-            <h2 className="font-playfair text-xl text-charcoal font-semibold mb-4">
-              My Booked Guides
-            </h2>
+        {loading ? <p className="mt-4 text-charcoal/60">Loading guides...</p> : null}
+        {error ? <p className="mt-4 text-red-600">{error}</p> : null}
 
-            {bookedGuides.map((guide) => (
-              <div
-                key={guide.id}
-                className="mb-4 last:mb-0 bg-sand rounded-3xl overflow-hidden border border-sand hover:border-saffron/30 transition-all duration-300 grid grid-cols-1 md:grid-cols-3"
+        {!loading && guides.length === 0 ? (
+          <p className="mt-4 text-charcoal/60 font-garamond">No available guides right now.</p>
+        ) : null}
+
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {guides.map((guide) => (
+            <article key={guide._id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-playfair text-xl text-charcoal">{guide.name}</h3>
+                  <p className="text-sm font-garamond text-charcoal/65 mt-0.5">{guide.location || 'Location not set'}</p>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs uppercase tracking-wide font-garamond bg-green-100 text-green-700">
+                  Available now
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center gap-4 text-sm font-garamond text-charcoal/75">
+                <p className="inline-flex items-center gap-1">
+                  <FiStar size={14} /> {guide.rating?.toFixed(1) || '4.5'}
+                </p>
+                <p>INR {guide.price}/trip</p>
+              </div>
+
+              <button
+                onClick={() => openBookingForm(guide)}
+                className="mt-4 px-4 py-2 rounded-lg bg-[#D96C54] text-white hover:opacity-90"
               >
-                {/* LEFT — Image */}
-                <div className="relative h-48 md:h-auto">
-                  <img
-                    src={guide.image}
-                    alt={guide.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                Book Guide
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
 
-                  {/* Status Badge */}
-                  <div
-                    className={`absolute top-4 left-4 font-garamond text-xs font-bold px-3 py-1 rounded-full ${guide.statusColor}`}
-                  >
-                    {guide.statusLabel}
-                  </div>
-                </div>
+      <section className="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
+        <h2 className="font-playfair text-2xl text-charcoal font-semibold">My Bookings</h2>
+        <p className="font-garamond text-charcoal/60 mt-1">Request, approval, and completion lifecycle.</p>
 
-                {/* RIGHT — Details */}
-                <div className="md:col-span-2 p-6">
-                  {/* Top Row */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-playfair text-xl text-charcoal font-bold mb-0.5">
-                        {guide.name}
-                      </h3>
-                      <p className="font-garamond text-sm text-charcoal/60">
-                        {guide.location}
-                      </p>
-                      <p className="font-garamond text-xs text-terracotta/70 mt-0.5">
-                        {guide.license}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-playfair text-lg text-charcoal font-bold">
-                        {guide.totalPaid}
-                      </p>
-                      <p className="font-garamond text-xs text-charcoal/50">
-                        {guide.tripDuration}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Info Pills */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <div className="bg-cream font-garamond text-xs text-charcoal/70 px-3 py-1 rounded-full border border-sand">
-                      ⭐ {guide.rating} ({guide.reviews} reviews)
-                    </div>
-                    <div className="bg-cream font-garamond text-xs text-charcoal/70 px-3 py-1 rounded-full border border-sand">
-                      📅 {guide.tripDate}
-                    </div>
-                    <div className="bg-cream font-garamond text-xs text-charcoal/70 px-3 py-1 rounded-full border border-sand">
-                      ✦ {guide.speciality}
-                    </div>
-                  </div>
-
-                  {/* Next Meeting */}
-                  <div className="bg-cream rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
-                    <FiMapPin size={18} />
-                    <div>
-                      <p className="font-garamond text-xs text-charcoal/50 uppercase tracking-wider mb-0.5">
-                        Next Meeting
-                      </p>
-                      <p className="font-playfair text-sm text-charcoal font-semibold">
-                        {guide.nextMeeting}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setActiveGuide(guide)
-                        setChatOpen(true)
-                      }}
-                      className="bg-charcoal text-cream font-garamond text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl hover:bg-saffron hover:text-charcoal transition-all duration-300"
-                    >
-                      💬 Open Chat
-                    </button>
-                    <button className="border border-sand text-charcoal/60 font-garamond text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl hover:border-saffron hover:text-saffron transition-all duration-300">
-                      📞 {guide.phone}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+        <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <h3 className="font-playfair text-xl text-charcoal mb-3">Pending</h3>
+            <div className="space-y-3">
+              {pendingBookings.length === 0 ? <p className="text-charcoal/60">No pending requests.</p> : null}
+              {pendingBookings.map((booking) => <BookingCard key={booking._id} booking={booking} />)}
+            </div>
           </div>
 
-          {/* AVAILABLE GUIDES */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-playfair text-xl text-charcoal font-semibold">
-                Book a New Guide
-              </h2>
-              <span className="font-garamond text-xs text-charcoal/40 uppercase tracking-wider">
-                All government verified
-              </span>
+          <div>
+            <h3 className="font-playfair text-xl text-charcoal mb-3">Confirmed</h3>
+            <div className="space-y-3">
+              {confirmedBookings.length === 0 ? <p className="text-charcoal/60">No confirmed bookings.</p> : null}
+              {confirmedBookings.map((booking) => <BookingCard key={booking._id} booking={booking} />)}
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {availableGuides.map((guide) => (
-                <div
-                  key={guide.id}
-                  className="bg-sand rounded-3xl p-6 border border-sand hover:border-saffron/40 hover:shadow-lg transition-all duration-300"
-                >
-                  {/* Top Row */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-playfair font-bold text-xl shrink-0 ${guide.avatarBg}`}
-                    >
-                      {guide.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-playfair text-lg text-charcoal font-bold">
-                        {guide.name}
-                      </h3>
-                      <p className="font-garamond text-sm text-charcoal/60">
-                        {guide.location}
-                      </p>
-                      <p className="font-garamond text-xs text-terracotta/70 mt-0.5">
-                        {guide.license}
-                      </p>
-                    </div>
-                  </div>
+          <div>
+            <h3 className="font-playfair text-xl text-charcoal mb-3">Rejected</h3>
+            <div className="space-y-3">
+              {rejectedBookings.length === 0 ? <p className="text-charcoal/60">No rejected bookings.</p> : null}
+              {rejectedBookings.map((booking) => <BookingCard key={booking._id} booking={booking} />)}
+            </div>
+          </div>
 
-                  {/* Details Row */}
-                  <div className="flex items-center gap-3 mb-3 flex-wrap">
-                    <span className="font-garamond text-sm text-charcoal/70">
-                      ⭐ {guide.rating}
-                    </span>
-                    <span className="font-garamond text-sm text-charcoal/40">·</span>
-                    <span className="font-garamond text-sm text-charcoal/70">
-                      {guide.speciality}
-                    </span>
-                  </div>
-
-                  {/* Languages */}
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {guide.languages.map((lang) => (
-                      <div
-                        key={lang}
-                        className="bg-cream font-garamond text-xs text-charcoal/60 px-2 py-1 rounded-full border border-sand"
-                      >
-                        {lang}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bottom Row */}
-                  <div className="flex items-center justify-between">
-                    <p className="font-playfair text-xl text-charcoal font-bold">
-                      {guide.rate}
-                    </p>
-                    <button className="bg-charcoal text-cream font-garamond text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl hover:bg-saffron hover:text-charcoal transition-all duration-300">
-                      Book Now →
-                    </button>
-                  </div>
-                </div>
-              ))}
+          <div>
+            <h3 className="font-playfair text-xl text-charcoal mb-3">Completed</h3>
+            <div className="space-y-3">
+              {completedBookings.length === 0 ? <p className="text-charcoal/60">No completed bookings.</p> : null}
+              {completedBookings.map((booking) => <BookingCard key={booking._id} booking={booking} />)}
             </div>
           </div>
         </div>
+      </section>
 
-        {/* RIGHT (lg:col-span-1) */}
-        <div className="lg:col-span-1">
-          {/* CHAT PANEL */}
-          <div className="bg-sand rounded-3xl overflow-hidden flex flex-col border border-sand" style={{ height: '600px' }}>
-            {!chatOpen ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div className="text-6xl mb-4">💬</div>
-                <h3 className="font-playfair text-2xl text-charcoal font-bold mb-2">
-                  Guide Chat
-                </h3>
-                <p className="font-garamond text-base text-charcoal/60 max-w-xs mb-4">
-                  Open a chat with your booked guide to coordinate your trip.
-                </p>
-                <p className="font-garamond text-sm text-charcoal/40">
-                  ← Select a guide to chat
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Chat Header */}
-                <div className="bg-cream px-5 py-4 border-b border-sand flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-playfair font-bold ${activeGuide?.avatarBg}`}
-                    >
-                      {activeGuide?.avatar}
-                    </div>
-                    <div>
-                      <p className="font-playfair text-base text-charcoal font-semibold">
-                        {activeGuide?.name}
-                      </p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                        <span className="font-garamond text-xs text-green-600">Online</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setChatOpen(false)}
-                    className="text-charcoal/40 hover:text-charcoal cursor-pointer text-xl"
-                  >
-                    ×
-                  </button>
-                </div>
+      {selectedGuide ? (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-playfair text-2xl text-charcoal">Book {selectedGuide.name}</h3>
+              <button onClick={closeBookingForm} className="text-charcoal/50 hover:text-charcoal text-xl">x</button>
+            </div>
 
-                {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.sender === 'tourist' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                          msg.sender === 'tourist'
-                            ? 'bg-charcoal text-cream rounded-tr-sm'
-                            : 'bg-cream text-charcoal rounded-tl-sm border border-sand'
-                        }`}
-                      >
-                        <p className="font-garamond text-sm leading-relaxed">
-                          {msg.text}
-                        </p>
-                        <p
-                          className={`font-garamond text-xs mt-1 ${
-                            msg.sender === 'tourist'
-                              ? 'text-white/40 text-right'
-                              : 'text-charcoal/40'
-                          }`}
-                        >
-                          {msg.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Chat Input Area */}
-                <div className="bg-cream border-t border-sand px-4 py-3 flex items-center gap-3">
+            <form onSubmit={submitBooking} className="mt-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="space-y-1">
+                  <span className="text-sm text-charcoal/70">Date</span>
                   <input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') sendMessage()
-                    }}
-                    className="flex-1 bg-sand border border-sand focus:border-saffron focus:outline-none font-garamond text-sm text-charcoal px-4 py-3 rounded-xl transition-colors"
+                    required
+                    type="date"
+                    name="date"
+                    value={form.date}
+                    onChange={onFormChange}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2"
                   />
-                  <button
-                    onClick={sendMessage}
-                    className="w-10 h-10 rounded-full bg-charcoal flex items-center justify-center hover:bg-saffron transition-all duration-300 cursor-pointer shrink-0"
-                  >
-                    <span className="text-white text-sm">→</span>
-                  </button>
-                </div>
-              </>
-            )}
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-charcoal/70">Time Slot</span>
+                  <input
+                    required
+                    type="text"
+                    name="time"
+                    placeholder="9:00 AM - 1:00 PM"
+                    value={form.time}
+                    onChange={onFormChange}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="space-y-1">
+                  <span className="text-sm text-charcoal/70">Duration</span>
+                  <input
+                    required
+                    type="text"
+                    name="duration"
+                    placeholder="4 hours"
+                    value={form.duration}
+                    onChange={onFormChange}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sm text-charcoal/70">Location</span>
+                  <input
+                    required
+                    type="text"
+                    name="location"
+                    placeholder="Amber Fort"
+                    value={form.location}
+                    onChange={onFormChange}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  />
+                </label>
+              </div>
+
+              <label className="space-y-1 block">
+                <span className="text-sm text-charcoal/70">Notes (optional)</span>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  value={form.notes}
+                  onChange={onFormChange}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  placeholder="Any preferences or travel details"
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-lg bg-[#D96C54] text-white py-2.5 hover:opacity-90 disabled:opacity-60"
+              >
+                {submitting ? 'Requesting...' : 'Request Booking'}
+              </button>
+            </form>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }
