@@ -13,7 +13,8 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:5173",  // Vite default
-    "http://localhost:5176",  // Current frontend dev
+    "http://localhost:5175",  // Current frontend dev
+    "http://localhost:5176",  // Vite alternate port
     "http://localhost:3000",  // CRA default
   ],
   credentials: true,

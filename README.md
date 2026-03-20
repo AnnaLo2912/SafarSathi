@@ -1,7 +1,7 @@
 # SafarSathi  
 ### AI-Powered Tourist Safety & Travel Platform
 
-**Tagline:** सुरक्षित यात्रा — Safe Travels
+**Tagline:** Safe Travels
 
 SafarSathi is a full-stack web platform designed to enhance safety and convenience for foreign tourists visiting India. It integrates AI-driven trip planning, real-time safety systems, dual-currency payments, and a verified guide network into a single seamless experience.
 

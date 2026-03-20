@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FiAlertCircle, FiMap, FiPackage, FiMenu } from 'react-icons/fi'
+import { FiMenu } from 'react-icons/fi'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -63,9 +63,6 @@ export default function Navbar() {
             <h1 className="font-playfair text-2xl font-bold text-charcoal">
               SafarSathi
             </h1>
-            <p className="font-garamond text-xs italic text-saffron">
-              सुरक्षित यात्रा
-            </p>
           </div>
 
           {/* CENTER - Nav Links (Hidden on Mobile) */}
@@ -83,18 +80,8 @@ export default function Navbar() {
 
           {/* RIGHT - Buttons */}
           <div className="flex items-center gap-2">
-            <button className="bg-terracotta text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-red-700 transition-colors flex items-center gap-2">
-              <FiAlertCircle size={16} /> SOS
-            </button>
-            
             {currentUser ? (
               <>
-                <button 
-                  onClick={() => navigate(userRole === 'guide' ? '/guide-dashboard' : '/tourist-dashboard')}
-                  className="hidden sm:block bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  {userRole === 'guide' ? <><FiMap size={16} /> Dashboard</> : <><FiPackage size={16} /> Dashboard</>}
-                </button>
                 <button 
                   onClick={handleLogout}
                   className="hidden sm:block border border-charcoal text-charcoal text-xs px-4 py-2 rounded-full ml-2 hover:bg-charcoal hover:text-cream transition-colors cursor-pointer"
@@ -145,15 +132,6 @@ export default function Navbar() {
           
           {currentUser ? (
             <>
-              <button 
-                onClick={() => {
-                  navigate(userRole === 'guide' ? '/guide-dashboard' : '/tourist-dashboard')
-                  setMobileMenuOpen(false)
-                }}
-                className="w-full mt-4 bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
-              >
-                {userRole === 'guide' ? <><FiMap size={16} /> Dashboard</> : <><FiPackage size={16} /> Dashboard</>}
-              </button>
               <button 
                 onClick={() => {
                   handleLogout()

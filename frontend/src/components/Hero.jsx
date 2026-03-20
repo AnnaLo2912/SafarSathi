@@ -17,13 +17,6 @@ export default function Hero() {
         }}
       />
 
-      {/* Badge - Top Left */}
-      <div className="absolute top-28 left-8 md:left-20">
-        <div className="bg-cream/90 text-charcoal text-xs font-garamond uppercase tracking-widest px-4 py-2 rounded-full">
-          ✦ AI-Powered Safety Platform
-        </div>
-      </div>
-
       {/* Content Layer */}
       <div className="absolute inset-0 flex flex-col justify-end pb-20 px-8 md:px-20 max-w-7xl mx-auto">
         {/* Main Headline */}
@@ -39,7 +32,7 @@ export default function Hero() {
         {/* Subtext */}
         <p className="font-garamond text-lg md:text-xl text-white/80 max-w-xl mt-6 mb-10">
           AI trip planning + 98ms panic alerts. Your verified guide network
-          across India — always within reach.
+          across India, always within reach.
         </p>
 
         {/* CTA Buttons */}

@@ -256,7 +256,7 @@ export default function CertificateUpload() {
                 onClick={() => navigate('/guide-dashboard')}
                 className="font-garamond text-xs text-charcoal/40 cursor-pointer hover:text-charcoal/60 transition-colors"
               >
-                Skip for now — upload later from dashboard
+                Skip for now. Upload later from dashboard
               </button>
             </div>
           </>

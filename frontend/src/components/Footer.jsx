@@ -23,9 +23,6 @@ export default function Footer() {
             <h2 className="font-playfair text-3xl font-bold text-cream mb-1">
               SafarSathi
             </h2>
-            <p className="font-garamond text-sm italic text-saffron mb-4">
-              सुरक्षित यात्रा
-            </p>
             <p className="font-garamond text-base text-cream leading-relaxed max-w-xs">
               AI-powered safety and travel planning for foreign tourists in
               India. Always within reach, always within budget.

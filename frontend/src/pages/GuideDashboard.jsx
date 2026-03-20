@@ -46,7 +46,7 @@ export default function GuideDashboard() {
             {activeTab === 'alerts' && <PanicAlerts />}
             {activeTab === 'map' && (
               <div className="text-center py-16">
-                <p className="font-playfair text-2xl text-charcoal">Tourist Map — Coming Soon</p>
+                <p className="font-playfair text-2xl text-charcoal">Tourist Map. Coming Soon</p>
               </div>
             )}
             {activeTab === 'chat' && <ChatPanel />}

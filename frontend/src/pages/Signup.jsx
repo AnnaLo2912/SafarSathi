@@ -101,16 +101,13 @@ export default function Signup() {
           <h1 className="font-playfair text-4xl font-bold text-white mb-2">
             SafarSathi
           </h1>
-          <p className="font-garamond text-sm italic text-saffron mb-8">
-            सुरक्षित यात्रा
-          </p>
 
           {/* Quote */}
           <blockquote className="font-playfair text-2xl text-white italic leading-relaxed mb-4">
-            "Every journey begins with a single step — take yours safely."
+            "Every journey begins with a single step. Take yours safely."
           </blockquote>
           <p className="font-garamond text-sm text-white/50">
-            — SafarSathi Promise
+            SafarSathi Promise
           </p>
 
           {/* Feature Pills */}
@@ -118,7 +115,7 @@ export default function Signup() {
             <div className="flex items-center gap-3">
               <span className="text-saffron text-lg">🚨</span>
               <span className="font-garamond text-sm text-white/80">
-                Panic alerts in 98ms — no login needed
+                Panic alerts in 98ms without login
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -140,7 +137,7 @@ export default function Signup() {
       {/* RIGHT PANEL */}
       <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-12">
         <div className="w-full max-w-md">
-          {/* STEP 1 — ROLE SELECTION */}
+          {/* STEP 1 ROLE SELECTION */}
           {step === 1 && (
             <>
               {/* Header */}
@@ -243,7 +240,7 @@ export default function Signup() {
             </>
           )}
 
-          {/* STEP 2 — SIGNUP FORM */}
+          {/* STEP 2 SIGNUP FORM */}
           {step === 2 && (
             <>
               {/* Header */}
