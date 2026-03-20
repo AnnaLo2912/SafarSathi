@@ -1,8 +1,10 @@
+import { FiAlertCircle, FiMap, FiCreditCard, FiUser } from 'react-icons/fi'
+
 export default function FeaturesStrip() {
   const features = [
     {
       number: '01',
-      icon: '🚨',
+      icon: <FiAlertCircle size={28} />,
       title: 'Panic in 98ms',
       description:
         'Triple-press your power button. GPS broadcasts instantly to every verified guide within 1km. No login. No delay.',
@@ -10,7 +12,7 @@ export default function FeaturesStrip() {
     },
     {
       number: '02',
-      icon: '🗺️',
+      icon: <FiMap size={28} />,
       title: 'AI Itineraries',
       description:
         "Type 'Jaipur 3 nights $150' and get a complete day-wise plan with hotels, timings, photos, and budget breakdown.",
@@ -18,7 +20,7 @@ export default function FeaturesStrip() {
     },
     {
       number: '03',
-      icon: '💳',
+      icon: <FiCreditCard size={28} />,
       title: 'Dual Currency',
       description:
         'Pay hotels in USD via Stripe. Top up INR wallet via Razorpay. Scan UPI QR codes for street food in seconds.',
@@ -26,7 +28,7 @@ export default function FeaturesStrip() {
     },
     {
       number: '04',
-      icon: '🧭',
+      icon: <FiUser size={28} />,
       title: 'Verified Guides',
       description:
         'Every guide is government-certified with OCR verification. Live tracking, chat, and earnings dashboard included.',

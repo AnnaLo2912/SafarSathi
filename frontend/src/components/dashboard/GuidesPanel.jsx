@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiMapPin } from 'react-icons/fi'
 
 export default function GuidesPanel() {
   const [activeGuide, setActiveGuide] = useState(null)
@@ -226,7 +227,7 @@ export default function GuidesPanel() {
 
                   {/* Next Meeting */}
                   <div className="bg-cream rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
-                    <span className="text-lg">📍</span>
+                    <FiMapPin size={18} />
                     <div>
                       <p className="font-garamond text-xs text-charcoal/50 uppercase tracking-wider mb-0.5">
                         Next Meeting

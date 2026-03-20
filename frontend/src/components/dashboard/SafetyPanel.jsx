@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FiMapPin, FiShield, FiUser } from 'react-icons/fi'
 
 export default function SafetyPanel() {
   const [panicActive, setPanicActive] = useState(false)
@@ -122,7 +123,7 @@ export default function SafetyPanel() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-cream flex items-center justify-center text-sm">
-                    📍
+                    <FiMapPin size={16} />
                   </div>
                   <span className="font-garamond text-sm text-charcoal/70">
                     GPS Location
@@ -203,7 +204,7 @@ export default function SafetyPanel() {
 
               <div className="relative">
                 <div className="w-20 h-20 rounded-full border-4 border-green-400 flex items-center justify-center bg-green-50 relative">
-                  <span className="text-3xl">🛡️</span>
+                  <FiShield size={40} className="text-green-600" />
                   <div className="absolute inset-0 rounded-full border-2 border-green-300 animate-ping opacity-30"></div>
                 </div>
               </div>
@@ -264,7 +265,7 @@ export default function SafetyPanel() {
               {/* Contact 3 */}
               <div className="flex items-center justify-between bg-cream rounded-xl px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">👮</span>
+                  <FiUser size={18} />
                   <div>
                     <div className="font-playfair text-sm text-charcoal font-semibold">
                       Police
@@ -423,8 +424,8 @@ export default function SafetyPanel() {
                         {guide.name}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-garamond text-xs text-charcoal/50">
-                          📍 {guide.distance}
+                        <span className="font-garamond text-xs text-charcoal/50 flex items-center gap-1">
+                          <FiMapPin size={12} /> {guide.distance}
                         </span>
                         <span className="font-garamond text-xs text-charcoal/50">·</span>
                         <span className="font-garamond text-xs text-charcoal/50">

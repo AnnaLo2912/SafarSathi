@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../../firebase'
+import { FiDollarSign, FiX, FiUser, FiPackage, FiBriefcase, FiAward, FiHome } from 'react-icons/fi'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
 
@@ -15,9 +16,9 @@ function TripDetailModal({ trip, onClose }) {
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 bg-sand text-charcoal font-garamond text-sm px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-all"
+            className="absolute top-4 right-4 z-10 bg-sand text-charcoal font-garamond text-sm px-4 py-2 rounded-full hover:bg-charcoal hover:text-cream transition-all flex items-center gap-2"
           >
-            ✕ Close
+            <FiX size={16} /> Close
           </button>
 
           {/* Hero */}
@@ -30,10 +31,11 @@ function TripDetailModal({ trip, onClose }) {
             </h2>
             <div className="flex flex-wrap gap-4 font-garamond text-sm text-white/60">
               <span>📅 {trip.duration} nights / {trip.duration + 1} days</span>
-              <span>💰 ${trip.budget} budget</span>
-              <span>👥 {trip.travelers || 1} traveler{trip.travelers > 1 ? 's' : ''}</span>
-              <span className="capitalize">
-                {trip.tripStyle === 'budget' ? '🎒' : trip.tripStyle === 'comfort' ? '🏨' : '👑'} {trip.tripStyle}
+              <span className="flex items-center gap-1"><FiDollarSign size={14} /> ${trip.budget} budget</span>
+              <span className="flex items-center gap-1"><FiUser size={14} /> {trip.travelers || 1} traveler{trip.travelers > 1 ? 's' : ''}</span>
+              <span className="capitalize flex items-center gap-2">
+                {trip.tripStyle === 'budget' ? <FiPackage size={16} /> : trip.tripStyle === 'comfort' ? <FiHome size={16} /> : <FiAward size={16} />}
+                {trip.tripStyle}
               </span>
             </div>
           </div>
@@ -200,8 +202,8 @@ function TripDetailModal({ trip, onClose }) {
             {/* Hotel Options */}
             {trip.hotelOptions?.length > 0 && (
               <div>
-                <h3 className="font-playfair text-2xl text-charcoal font-bold mb-6">
-                  🏨 Hotel Options
+                <h3 className="font-playfair text-2xl text-charcoal font-bold mb-6 flex items-center gap-2">
+                  <FiHome size={24} /> Hotel Options
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {trip.hotelOptions.map((h, i) => (
@@ -237,8 +239,8 @@ function TripDetailModal({ trip, onClose }) {
             {/* Budget Breakdown */}
             {trip.budgetBreakdown && (
               <div className="bg-sand rounded-2xl p-6">
-                <h3 className="font-playfair text-xl text-charcoal font-bold mb-5">
-                  💰 Budget Breakdown
+                <h3 className="font-playfair text-xl text-charcoal font-bold mb-5 flex items-center gap-2">
+                  <FiDollarSign size={18} /> Budget Breakdown
                 </h3>
                 <div className="space-y-4">
                   {[
@@ -274,8 +276,8 @@ function TripDetailModal({ trip, onClose }) {
             {/* Packing List */}
             {trip.packingList?.length > 0 && (
               <div className="bg-sand rounded-2xl p-6">
-                <h3 className="font-playfair text-xl text-charcoal font-bold mb-5">
-                  🎒 Packing List
+                <h3 className="font-playfair text-xl text-charcoal font-bold mb-5 flex items-center gap-2">
+                  <FiPackage size={20} /> Packing List
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {trip.packingList.map((item, i) => (
@@ -471,7 +473,7 @@ export default function MyTrips() {
                     </h3>
                     <div className="flex items-center gap-3 font-garamond text-xs text-white/50">
                       <span>📅 {trip.duration} nights</span>
-                      <span>💰 ${trip.budget}</span>
+                      <span className="flex items-center gap-1"><FiDollarSign size={14} /> ${trip.budget}</span>
                     </div>
                   </div>
                   <div className={`font-garamond text-xs px-3 py-1 rounded-full shrink-0
@@ -488,8 +490,8 @@ export default function MyTrips() {
               {/* Card Body */}
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg">
-                    {trip.tripStyle === 'budget' ? '🎒' : trip.tripStyle === 'comfort' ? '🏨' : '👑'}
+                  <span>
+                    {trip.tripStyle === 'budget' ? <FiPackage size={18} /> : trip.tripStyle === 'comfort' ? <FiHome size={18} /> : <FiAward size={18} />}
                   </span>
                   <span className="font-garamond text-sm text-charcoal/60 capitalize">
                     {trip.tripStyle} trip

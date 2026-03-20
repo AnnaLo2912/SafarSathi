@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiSmartphone } from 'react-icons/fi'
 
 export default function WalletPanel() {
   const [showQR, setShowQR] = useState(false)
@@ -171,7 +172,9 @@ export default function WalletPanel() {
             <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/50 mb-3">
               UPI Scanner
             </div>
-            <div className="text-5xl mb-3">📱</div>
+            <div className="mb-3 text-5xl flex items-center justify-center">
+              <FiSmartphone size={56} className="text-charcoal" />
+            </div>
             <h3 className="font-playfair text-2xl text-charcoal font-bold mb-1">
               Scan & Pay
             </h3>

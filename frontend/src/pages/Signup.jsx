@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { FiPackage, FiMap, FiAlertTriangle } from 'react-icons/fi'
 
 export default function Signup() {
   const [step, setStep] = useState(1) // 1: role select, 2: form
@@ -19,6 +20,13 @@ export default function Signup() {
   async function handleSignup(e) {
     e.preventDefault()
     setError('')
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return setError('Please enter a valid email address.')
+    }
+    
     if (password !== confirmPassword) {
       return setError('Passwords do not match.')
     }
@@ -34,10 +42,17 @@ export default function Signup() {
         navigate('/tourist-dashboard')
       }
     } catch (err) {
+      // Better error messages for common Firebase errors
       if (err.code === 'auth/email-already-in-use') {
         setError('An account with this email already exists.')
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password should be at least 6 characters.')
+      } else if (err.message?.includes('400')) {
+        setError('Invalid email or password. Please check and try again.')
       } else {
-        setError('Failed to create account. Please try again.')
+        setError(err.message || 'Failed to create account. Please try again.')
       }
     }
     setLoading(false)
@@ -161,7 +176,7 @@ export default function Signup() {
                       ✓
                     </div>
                   )}
-                  <div className="text-4xl mb-3">🧳</div>
+                  <div className="text-4xl mb-3"><FiPackage size={40} /></div>
                   <h3 className="font-playfair text-xl text-charcoal font-bold mb-2">
                     Tourist
                   </h3>
@@ -184,7 +199,7 @@ export default function Signup() {
                       ✓
                     </div>
                   )}
-                  <div className="text-4xl mb-3">🗺️</div>
+                  <div className="text-4xl mb-3"><FiMap size={40} /></div>
                   <h3 className="font-playfair text-xl text-charcoal font-bold mb-2">
                     Guide
                   </h3>
@@ -197,7 +212,7 @@ export default function Signup() {
               {/* Guide Warning */}
               {role === 'guide' && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 flex items-start gap-3">
-                  <span className="text-amber-500 text-lg flex-shrink-0">⚠️</span>
+                  <FiAlertTriangle className="text-amber-500 flex-shrink-0 mt-0.5" size={20} />
                   <p className="font-garamond text-sm text-amber-700">
                     You'll need to upload your government guide certificate after signup for approval.
                   </p>
@@ -242,10 +257,12 @@ export default function Signup() {
 
                 {/* Role Badge */}
                 <div className="inline-flex items-center gap-2 bg-sand px-4 py-2 rounded-full font-garamond text-sm text-charcoal/70 mb-4">
-                  <span>{role === 'tourist' ? '🧳' : '🗺️'}</span>
+                <div className="flex items-center gap-2">
+                  {role === 'tourist' ? <FiPackage size={18} /> : <FiMap size={18} />}
                   <span>
                     {role === 'tourist' ? 'Signing up as Tourist' : 'Signing up as Guide'}
                   </span>
+                </div>
                 </div>
 
                 <h2 className="font-playfair text-4xl text-charcoal font-bold mb-1">

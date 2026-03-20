@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiMapPin } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
 
 export default function ProfilePanel() {
@@ -122,8 +123,8 @@ export default function ProfilePanel() {
             </h2>
 
             {/* Location */}
-            <p className="font-garamond text-sm text-charcoal/60 mb-3">
-              📍 {form.location}
+            <p className="font-garamond text-sm text-charcoal/60 mb-3 flex items-center gap-2">
+              <FiMapPin size={14} /> {form.location}
             </p>
 
             {/* Rating */}

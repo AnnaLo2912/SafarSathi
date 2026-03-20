@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { FiMapPin, FiShield } from 'react-icons/fi'
 
 const resolvedAlerts = [
   {
@@ -168,7 +169,7 @@ export default function PanicAlerts() {
                   <div className="space-y-4">
                     {/* Location */}
                     <div className="flex items-start gap-3">
-                      <span className="text-lg mt-1">📍</span>
+                      <FiMapPin size={18} className="mt-1" />
                       <div>
                         <p className="font-garamond text-xs text-white/40 uppercase tracking-wider mb-0.5">
                           Location
@@ -293,7 +294,9 @@ export default function PanicAlerts() {
       ) : (
         /* ALL CLEAR STATE */
         <div className="bg-sand rounded-3xl p-12 text-center mb-6">
-          <p className="text-6xl mb-4">🛡️</p>
+          <div className="text-6xl mb-4 flex justify-center">
+            <FiShield size={60} />
+          </div>
           <p className="font-playfair text-3xl text-charcoal font-bold mb-3">
             All Clear
           </p>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiAlertCircle } from 'react-icons/fi'
 
 export default function PanicCTA() {
   const [triggered, setTriggered] = useState(false)
@@ -84,13 +85,13 @@ export default function PanicCTA() {
             {/* Button */}
             <button
               onClick={handlePanicDemo}
-              className={`relative z-10 font-garamond text-lg uppercase tracking-widest px-12 py-5 rounded-full transition-all duration-300 cursor-pointer border-2 shadow-2xl ${
+              className={`relative z-10 font-garamond text-lg uppercase tracking-widest px-12 py-5 rounded-full transition-all duration-300 cursor-pointer border-2 shadow-2xl flex items-center gap-2 ${
                 triggered
                   ? 'bg-green-600 border-green-600 text-white'
                   : 'bg-black border-black text-white hover:bg-gray-900 hover:shadow-xl'
               }`}
             >
-              {triggered ? '✓ Demo Alert Sent!' : '🚨 Test Panic Demo'}
+              {triggered ? '✓ Demo Alert Sent!' : <><FiAlertCircle size={24} /> Test Panic Demo</>}
             </button>
           </div>
 
@@ -109,9 +110,10 @@ export default function PanicCTA() {
           <div className="bg-cream rounded-3xl shadow-2xl overflow-hidden w-72 border-4 border-white/10">
             {/* Red Alert Header */}
             <div className="bg-terracotta px-6 py-4 flex items-center justify-between">
-              <p className="font-playfair text-white text-lg font-bold">
-                🚨 ALERT SENT
-              </p>
+              <div className="flex items-center gap-2">
+                <FiAlertCircle size={20} />
+                <p className="font-playfair text-white text-lg font-bold">ALERT SENT</p>
+              </div>
               <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
             </div>
 

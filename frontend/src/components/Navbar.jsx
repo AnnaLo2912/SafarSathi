@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { FiAlertCircle, FiMap, FiPackage, FiMenu } from 'react-icons/fi'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -52,9 +53,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed w-full top-0 z-50 bg-cream border-b border-sand transition-all duration-300 transform ${
-          isVisible ? 'translate-y-0' : '-translate-y-full'
-        } ${
+        className={`sticky w-full top-0 z-50 bg-cream border-b border-sand transition-all duration-300 ${
           scrolled ? 'shadow-lg' : 'shadow-sm'
         }`}
       >
@@ -84,17 +83,17 @@ export default function Navbar() {
 
           {/* RIGHT - Buttons */}
           <div className="flex items-center gap-2">
-            <button className="bg-terracotta text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-red-700 transition-colors">
-              🚨 SOS
+            <button className="bg-terracotta text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-red-700 transition-colors flex items-center gap-2">
+              <FiAlertCircle size={16} /> SOS
             </button>
             
             {currentUser ? (
               <>
                 <button 
                   onClick={() => navigate(userRole === 'guide' ? '/guide-dashboard' : '/tourist-dashboard')}
-                  className="hidden sm:block bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
+                  className="hidden sm:block bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer flex items-center gap-2"
                 >
-                  {userRole === 'guide' ? '🗺️ Dashboard' : '🧳 Dashboard'}
+                  {userRole === 'guide' ? <><FiMap size={16} /> Dashboard</> : <><FiPackage size={16} /> Dashboard</>}
                 </button>
                 <button 
                   onClick={handleLogout}
@@ -125,7 +124,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-charcoal text-2xl ml-4"
             >
-              ☰
+              <FiMenu size={24} />
             </button>
           </div>
         </div>
@@ -153,7 +152,7 @@ export default function Navbar() {
                 }}
                 className="w-full mt-4 bg-saffron text-charcoal text-xs font-bold px-4 py-2 rounded-full hover:bg-amber-500 transition-colors cursor-pointer"
               >
-                {userRole === 'guide' ? '🗺️ Dashboard' : '🧳 Dashboard'}
+                {userRole === 'guide' ? <><FiMap size={16} /> Dashboard</> : <><FiPackage size={16} /> Dashboard</>}
               </button>
               <button 
                 onClick={() => {

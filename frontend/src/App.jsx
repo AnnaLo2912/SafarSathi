@@ -13,12 +13,13 @@ import CertificateUpload from './pages/CertificateUpload'
 import ProtectedRoute from './components/ProtectedRoute'
 import TouristDashboard from './pages/TouristDashboard'
 import GuideDashboard from './pages/GuideDashboard'
+import { FiAlertCircle } from 'react-icons/fi'
 
 function HomePage() {
   return (
     <div className="bg-cream font-garamond page-fade-in">
       <Navbar />
-      <div className="pt-20">
+      <div>
         <div id="home">
           <Hero />
         </div>
@@ -50,7 +51,7 @@ function HomePage() {
         <div className="relative">
           <div className="absolute inset-0 rounded-full bg-terracotta/30 animate-ping pointer-events-none"></div>
           <button className="relative w-16 h-16 rounded-full bg-terracotta text-white flex flex-col items-center justify-center shadow-2xl hover:bg-red-700 transition-all duration-300 cursor-pointer border-2 border-white/20">
-            <span className="text-xl leading-none">🚨</span>
+            <FiAlertCircle size={24} />
             <span className="font-garamond text-xs font-bold uppercase tracking-wider mt-0.5">
               SOS
             </span>

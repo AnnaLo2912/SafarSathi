@@ -1,3 +1,5 @@
+import { FiAlertCircle, FiTruck, FiUser, FiSmartphone } from 'react-icons/fi'
+
 export default function Footer() {
   const exploreLinks = [
     'Destinations',
@@ -98,30 +100,27 @@ export default function Footer() {
               {/* Emergency Numbers */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-garamond text-sm text-cream">
-                    🚨 India Emergency
-                  </p>
-                  <p className="font-playfair text-sm text-saffron font-bold">
-                    112
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <FiAlertCircle size={18} />
+                    <p className="font-garamond text-sm text-cream">India Emergency</p>
+                  </div>
+                  <p className="font-playfair text-sm text-saffron font-bold">112</p>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <p className="font-garamond text-sm text-cream">
-                    🏥 Ambulance
-                  </p>
-                  <p className="font-playfair text-sm text-saffron font-bold">
-                    108
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <FiTruck size={18} />
+                    <p className="font-garamond text-sm text-cream">Ambulance</p>
+                  </div>
+                  <p className="font-playfair text-sm text-saffron font-bold">108</p>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <p className="font-garamond text-sm text-cream">
-                    👮 Police
-                  </p>
-                  <p className="font-playfair text-sm text-saffron font-bold">
-                    100
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <FiUser size={18} />
+                    <p className="font-garamond text-sm text-cream">Police</p>
+                  </div>
+                  <p className="font-playfair text-sm text-saffron font-bold">100</p>
                 </div>
               </div>
 
@@ -130,9 +129,10 @@ export default function Footer() {
 
               {/* SafarSathi SOS */}
               <div className="flex items-center justify-between">
-                <p className="font-garamond text-sm text-cream">
-                  📱 SafarSathi SOS
-                </p>
+                <div className="flex items-center gap-2">
+                  <FiSmartphone size={18} />
+                  <p className="font-garamond text-sm text-cream">SafarSathi SOS</p>
+                </div>
                 <div className="bg-terracotta text-cream font-garamond text-xs px-3 py-1 rounded-full flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-cream animate-pulse" />
                   Always Active

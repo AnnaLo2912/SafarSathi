@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { auth } from '../../firebase'
+import { FiDollarSign, FiMapPin, FiPackage, FiBriefcase, FiAward } from 'react-icons/fi'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
 
@@ -259,9 +260,9 @@ export default function TripPlanner() {
                   onChange={(e) => setTripStyle(e.target.value)}
                   className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
                 >
-                  <option value="budget">🎒 Budget</option>
-                  <option value="comfort">🏨 Comfort</option>
-                  <option value="luxury">👑 Luxury</option>
+                  <option value="budget">Budget</option>
+                  <option value="comfort">Comfort</option>
+                  <option value="luxury">Luxury</option>
                 </select>
               </div>
             </div>
@@ -341,7 +342,7 @@ export default function TripPlanner() {
           </h2>
           <div className="flex flex-wrap items-center gap-4 font-garamond text-sm text-white/70">
             <span>📅 {itinerary.duration}</span>
-            <span>💰 {itinerary.totalBudget} budget</span>
+            <span className="flex items-center gap-2"><FiDollarSign size={16} /> {itinerary.totalBudget} budget</span>
             <span>🌤 {itinerary.weather}</span>
           </div>
         </div>
@@ -529,7 +530,7 @@ export default function TripPlanner() {
                     <h3 className="font-playfair text-xl text-charcoal font-bold">{hotel.name}</h3>
                     <div className="font-garamond text-sm text-saffron">{'⭐'.repeat(hotel.stars)}</div>
                   </div>
-                  <div className="font-garamond text-sm text-charcoal/60 mb-3">📍 {hotel.location}</div>
+                  <div className="font-garamond text-sm text-charcoal/60 mb-3 flex items-center gap-2"><FiMapPin size={16} /> {hotel.location}</div>
                   <div className="mb-1">
                     <div className="font-playfair text-2xl text-charcoal font-bold">{hotel.price}</div>
                     {hotel.priceINR && (
@@ -632,7 +633,7 @@ export default function TripPlanner() {
       {/* PACKING LIST */}
       {itinerary.packingList?.length > 0 && (
         <div className="bg-sand rounded-3xl p-8 mb-10">
-          <h3 className="font-playfair text-2xl text-charcoal font-bold mb-6">🎒 Packing List</h3>
+          <h3 className="font-playfair text-2xl text-charcoal font-bold mb-6 flex items-center gap-2"><FiPackage size={24} /> Packing List</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {itinerary.packingList.map((item, i) => (
               <div key={i} className="flex items-start gap-2 font-garamond text-sm text-charcoal/70">

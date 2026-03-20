@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiDollarSign } from 'react-icons/fi'
 
 const earningsData = {
   week: {
@@ -136,8 +137,8 @@ export default function EarningsPanel() {
           <h1 className="font-playfair text-4xl text-charcoal font-bold">
             Money well
           </h1>
-          <p className="font-playfair text-4xl text-saffron italic font-bold">
-            earned. 💰
+          <p className="font-playfair text-4xl text-saffron italic font-bold flex items-center gap-2">
+            earned. <FiDollarSign size={24} />
           </p>
         </div>
 

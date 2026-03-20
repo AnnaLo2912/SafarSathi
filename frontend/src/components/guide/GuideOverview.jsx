@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { FiDollarSign, FiPackage, FiMapPin, FiShield, FiZap } from 'react-icons/fi'
 
 const stats = [
   {
     label: "This Week",
     value: "₹6,000",
     sub: "3 trips completed",
-    icon: "💰",
+    icon: "dollar",
     color: "bg-saffron",
     trend: "+12% vs last week"
   },
@@ -13,7 +14,7 @@ const stats = [
     label: "Active Tourists",
     value: "3",
     sub: "On trip right now",
-    icon: "🧳",
+    icon: "package",
     color: "bg-deepblue",
     trend: "2 more upcoming"
   },
@@ -21,7 +22,7 @@ const stats = [
     label: "Response Rate",
     value: "98ms",
     sub: "Panic alert speed",
-    icon: "⚡",
+    icon: "zap",
     color: "bg-terracotta",
     trend: "Top 5% of guides"
   },
@@ -97,6 +98,25 @@ const recentReviews = [
   }
 ]
 
+function getStatIcon(iconName) {
+  const iconMap = {
+    dollar: <FiDollarSign size={24} />,
+    package: <FiPackage size={24} />,
+    zap: <FiZap size={24} />
+  }
+  return iconMap[iconName] || null
+}
+
+function getActionIcon(iconName) {
+  const iconMap = {
+    'calendar': <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v2h16V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5H2v8a2 2 0 002 2h12a2 2 0 002-2V7H6z"/></svg>,
+    'chat': <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/></svg>,
+    'map-pin': <FiMapPin size={24} />,
+    'dollar-sign': <FiDollarSign size={24} />
+  }
+  return iconMap[iconName] || null
+}
+
 export default function GuideOverview({ available, setAvailable }) {
   return (
     <div className="page-fade-in">
@@ -156,7 +176,7 @@ export default function GuideOverview({ available, setAvailable }) {
 
             <div className="flex items-center justify-between mb-4">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl ${stat.color}`}>
-                {stat.icon}
+                {getStatIcon(stat.icon)}
               </div>
               <p className="font-garamond text-xs text-charcoal/40 uppercase tracking-wider">
                 {stat.label}
@@ -214,8 +234,8 @@ export default function GuideOverview({ available, setAvailable }) {
                         {booking.country}
                       </p>
                     </div>
-                    <p className="font-garamond text-sm text-charcoal/60 mt-0.5">
-                      📍 {booking.location}
+                      <p className="font-garamond text-sm text-charcoal/60 mt-0.5 flex items-center gap-2">
+                        <FiMapPin size={14} /> {booking.location}
                     </p>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       <p className="font-garamond text-xs text-charcoal/50">
@@ -261,7 +281,7 @@ export default function GuideOverview({ available, setAvailable }) {
                   key={idx}
                   className="bg-sand rounded-2xl p-4 text-center cursor-pointer border border-sand hover:border-saffron/40 hover:shadow-md transition-all duration-300"
                 >
-                  <p className="text-2xl mb-2">{action.emoji}</p>
+                  <p className="text-2xl mb-2 flex justify-center">{getActionIcon(action.emoji)}</p>
                   <p className="font-garamond text-xs text-charcoal/70 uppercase tracking-wider">
                     {action.label}
                   </p>
@@ -296,7 +316,9 @@ export default function GuideOverview({ available, setAvailable }) {
 
               {/* No Alerts State */}
               <div className="text-center py-6">
-                <p className="text-4xl mb-3">🛡️</p>
+                <div className="flex justify-center mb-3">
+                  <FiShield size={40} />
+                </div>
                 <p className="font-playfair text-base text-white/80 mb-1">All Clear</p>
                 <p className="font-garamond text-sm text-white/50">
                   No panic alerts in your area. You'll be notified instantly if a
