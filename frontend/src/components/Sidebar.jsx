@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { FiX, FiMenu, FiLogOut } from 'react-icons/fi'
 
-export default function Sidebar({ tabs, activeTab, setActiveTab, isDashboard = 'tourist' }) {
+export default function Sidebar({ tabs, activeTab, setActiveTab, isDashboard = 'tourist', onToggle }) {
   const [isOpen, setIsOpen] = useState(true)
   const navigate = useNavigate()
   const { logout } = useAuth()
+
+  useEffect(() => {
+    if (onToggle) onToggle(isOpen)
+  }, [isOpen, onToggle])
 
   async function handleLogout() {
     await logout()
@@ -73,21 +77,14 @@ export default function Sidebar({ tabs, activeTab, setActiveTab, isDashboard = '
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div
-        className={`transition-all duration-300 ${
-          isOpen ? 'ml-64' : 'ml-20'
-        }`}
+      {/* Toggle Button (Mobile Visible) */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden fixed bottom-6 right-6 z-40 bg-saffron text-charcoal rounded-full p-3 shadow-lg hover:bg-terracotta transition-colors"
+        title="Toggle Sidebar"
       >
-        {/* Toggle Button (Mobile Visible) */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden fixed bottom-6 right-6 z-40 bg-saffron text-charcoal rounded-full p-3 shadow-lg hover:bg-terracotta transition-colors"
-          title="Toggle Sidebar"
-        >
-          {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
-        </button>
-      </div>
+        {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+      </button>
     </>
   )
 }

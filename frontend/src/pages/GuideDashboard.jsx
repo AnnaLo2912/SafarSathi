@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
 import GuideOverview from '../components/guide/GuideOverview'
+import BookingsPanel from '../components/guide/BookingsPanel'
 import PanicAlerts from '../components/guide/PanicAlerts'
 import EarningsPanel from '../components/guide/EarningsPanel'
 import ProfilePanel from '../components/guide/ProfilePanel'
@@ -11,6 +12,7 @@ import { FiBarChart2, FiCalendar, FiAlertCircle, FiMapPin, FiMessageCircle, FiDo
 export default function GuideDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [available, setAvailable] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <FiBarChart2 size={20} /> },
@@ -31,19 +33,16 @@ export default function GuideDashboard() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         isDashboard="guide"
+        onToggle={setSidebarOpen}
       />
 
       {/* Main Content */}
-      <div className="md:ml-64 ml-20 transition-all duration-300 p-6 md:p-10">
-        <div className="max-w-6xl mx-auto">
+      <div className={`${sidebarOpen ? 'ml-64' : 'ml-20'} pl-6 md:pl-10 pr-4 md:pr-6 py-6 transition-all duration-300`}>
+        <div className="w-full">
           {/* Content Area */}
           <div className="pb-24 md:pb-10">
             {activeTab === 'overview' && <GuideOverview available={available} setAvailable={setAvailable} />}
-            {activeTab === 'bookings' && (
-              <div className="text-center py-16">
-                <p className="font-playfair text-2xl text-charcoal">Bookings — Coming Soon</p>
-              </div>
-            )}
+            {activeTab === 'bookings' && <BookingsPanel />}
             {activeTab === 'alerts' && <PanicAlerts />}
             {activeTab === 'map' && (
               <div className="text-center py-16">
