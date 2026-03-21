@@ -27,8 +27,10 @@ export default function Login() {
       const role = userDoc.data()?.role
       if (role === 'guide') {
         navigate('/guide-dashboard')
-      } else {
+      } else if (role === 'tourist') {
         navigate('/tourist-dashboard')
+      } else {
+        navigate('/signup')
       }
     } catch (err) {
       setError('Invalid email or password. Please try again.')
@@ -47,8 +49,10 @@ export default function Login() {
       const role = userDoc.data()?.role
       if (role === 'guide') {
         navigate('/guide-dashboard')
-      } else {
+      } else if (role === 'tourist') {
         navigate('/tourist-dashboard')
+      } else {
+        navigate('/signup')
       }
     } catch (err) {
       setError('Google sign-in failed. Please try again.')

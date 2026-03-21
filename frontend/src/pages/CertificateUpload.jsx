@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import Navbar from '../components/Navbar'
+import { uploadCertificateForVerification } from '../services/bookingService'
 
 export default function CertificateUpload() {
   const [file, setFile] = useState(null)
@@ -12,6 +13,7 @@ export default function CertificateUpload() {
   const [uploaded, setUploaded] = useState(false)
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [verificationResponse, setVerificationResponse] = useState(null)
 
   const { currentUser, userProfile } = useAuth()
   const navigate = useNavigate()
@@ -49,20 +51,41 @@ export default function CertificateUpload() {
   }
 
   async function handleUpload() {
-    if (!file) return
+    if (!file) {
+      setError('Please choose a certificate file first.')
+      return
+    }
+
+    if (!currentUser) {
+      setError('Session expired. Please login again.')
+      return
+    }
+
     setUploading(true)
     setError('')
     try {
-      // For now store file name in Firestore
-      // Cloudinary integration comes later
+      const verification = await uploadCertificateForVerification(
+        file,
+        userProfile?.name || currentUser?.displayName || ''
+      )
+      setVerificationResponse(verification)
+
       await updateDoc(doc(db, 'users', currentUser.uid), {
         certificateFileName: file.name,
-        certificateStatus: 'pending',
-        certificateUploadedAt: new Date().toISOString()
+        certificateStatus: verification.verification_status || 'pending',
+        certificateUploadedAt: new Date().toISOString(),
+        certificateExtractedName: verification.extracted_name || '',
+        certificateEnrollmentNo: verification.extracted_enrollment_no || '',
+        certificateMatchResult: verification.match_result || '',
       })
       setUploaded(true)
     } catch (err) {
-      setError('Upload failed. Please try again.')
+      const message = err?.message || 'Upload failed. Please try again.'
+      if (message.toLowerCase().includes('fetch')) {
+        setError('Could not reach backend server. Ensure backend is running on port 5001 and reload the page.')
+      } else {
+        setError(message)
+      }
     }
     setUploading(false)
   }
@@ -276,9 +299,18 @@ export default function CertificateUpload() {
 
               {/* Subtitle */}
               <p className="font-garamond text-lg text-charcoal/60 max-w-md mx-auto mb-8">
-                We've received your certificate and will review it within 24 hours.
-                You'll get an email once approved.
+                {verificationResponse?.verification_status === 'verified'
+                  ? 'Your certificate is verified. You can now go online from the guide dashboard.'
+                  : 'We have received your certificate. If it was not verified automatically, please re-upload a clearer certificate or complete IITF exam registration.'}
               </p>
+
+              {verificationResponse ? (
+                <div className="bg-cream border border-sand rounded-xl px-5 py-4 max-w-md mx-auto mb-6 text-left">
+                  <p className="font-garamond text-sm text-charcoal/70">Extracted Name: {verificationResponse.extracted_name || 'N/A'}</p>
+                  <p className="font-garamond text-sm text-charcoal/70">Enrollment No: {verificationResponse.extracted_enrollment_no || 'N/A'}</p>
+                  <p className="font-garamond text-sm text-charcoal/70">Match Result: {verificationResponse.match_result || 'N/A'}</p>
+                </div>
+              ) : null}
 
               {/* Status Card */}
               <div className="bg-sand rounded-2xl px-8 py-6 max-w-sm mx-auto mb-8">
@@ -297,8 +329,18 @@ export default function CertificateUpload() {
                   <span className="font-garamond text-sm text-charcoal/70">
                     OCR Verification
                   </span>
-                  <span className="bg-amber-100 text-amber-700 font-garamond text-xs px-3 py-1 rounded-full">
-                    ⏳ Pending
+                  <span className={`font-garamond text-xs px-3 py-1 rounded-full ${
+                    verificationResponse?.verification_status === 'verified'
+                      ? 'bg-green-100 text-green-700'
+                      : verificationResponse?.verification_status === 'rejected'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {verificationResponse?.verification_status === 'verified'
+                      ? '✓ Verified'
+                      : verificationResponse?.verification_status === 'rejected'
+                      ? '✕ Rejected'
+                      : '⏳ Pending'}
                   </span>
                 </div>
 

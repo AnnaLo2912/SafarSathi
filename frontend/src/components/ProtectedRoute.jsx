@@ -28,6 +28,11 @@ export default function ProtectedRoute({
     return <Navigate to="/login" replace />
   }
 
+  // Logged in but no role/profile document — complete onboarding first
+  if (!userRole) {
+    return <Navigate to="/signup" replace />
+  }
+
   // Logged in but wrong role — redirect to their correct dashboard
   if (allowedRole && userRole !== allowedRole) {
     if (userRole === 'guide') {

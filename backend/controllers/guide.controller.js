@@ -1,4 +1,7 @@
 import Guide from "../models/Guide.model.js";
+import Booking from "../models/Booking.model.js";
+import VerificationAttempt from "../models/VerificationAttempt.model.js";
+import Trip from "../models/Trip.model.js";
 
 // POST /api/guide/availability
 export const toggleAvailability = async (req, res) => {
@@ -12,17 +15,29 @@ export const toggleAvailability = async (req, res) => {
       });
     }
 
+    const existingGuide = await Guide.findOne({ user_id: req.user.uid });
+
+    if (availability === true && (!existingGuide || !existingGuide.is_verified)) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your IITF certification to go online.",
+      });
+    }
+
     const guide = await Guide.findOneAndUpdate(
       { user_id: req.user.uid },
       {
         user_id: req.user.uid,
         name: name || req.user.name || "Local Guide",
+        full_name: name || req.user.name || existingGuide?.full_name || "",
         availability,
         location: location || "",
         rating: typeof rating === "number" ? rating : 4.5,
         price: typeof price === "number" ? price : 1500,
+        is_verified: existingGuide?.is_verified || false,
+        verification_status: existingGuide?.verification_status || "not_submitted",
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
     );
 
     return res.json({
@@ -48,6 +63,7 @@ export const getGuides = async (req, res) => {
 
     if (available === "true") {
       query.availability = true;
+      query.is_verified = true;
     }
 
     const guides = await Guide.find(query).sort({ rating: -1, createdAt: -1 });
@@ -56,6 +72,38 @@ export const getGuides = async (req, res) => {
       success: true,
       count: guides.length,
       guides,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// DELETE /api/guide/account
+export const deleteGuideAccount = async (req, res) => {
+  try {
+    const guide = await Guide.findOne({ user_id: req.user.uid });
+
+    if (guide) {
+      await VerificationAttempt.deleteMany({ guide_id: guide._id });
+    }
+
+    const [bookingResult, guideResult, tripResult] = await Promise.all([
+      Booking.deleteMany({ guide_id: req.user.uid }),
+      Guide.deleteOne({ user_id: req.user.uid }),
+      Trip.deleteMany({ firebaseUid: req.user.uid }),
+    ]);
+
+    return res.json({
+      success: true,
+      message: "Guide account data removed from platform database.",
+      deleted: {
+        guide: guideResult.deletedCount || 0,
+        bookings: bookingResult.deletedCount || 0,
+        trips: tripResult.deletedCount || 0,
+      },
     });
   } catch (error) {
     return res.status(500).json({

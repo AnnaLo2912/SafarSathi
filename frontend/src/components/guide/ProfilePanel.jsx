@@ -1,35 +1,115 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FiMapPin } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
+import { getVerificationStatus } from '../../services/bookingService'
+import { useNavigate } from 'react-router-dom'
 
 export default function ProfilePanel() {
-  const { userProfile } = useAuth()
+  const { userProfile, updateUserProfile, deleteGuideAccount } = useAuth()
+  const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [verificationStatus, setVerificationStatus] = useState('not_submitted')
+  const [isVerified, setIsVerified] = useState(false)
+  const [verifiedAt, setVerifiedAt] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const [form, setForm] = useState({
-    name: userProfile?.name || 'Rajesh Kumar',
-    email: userProfile?.email || 'rajesh@example.com',
-    phone: '+91 98765 43210',
-    location: 'Jaipur, Rajasthan',
-    bio: 'Government certified heritage guide with 8 years of experience in Rajasthan. Specializing in Jaipur forts, palaces, and local culture. Fluent in English, Hindi, and French.',
-    speciality: 'Heritage & Forts',
-    experience: '8 years',
-    rate: '2000',
-    languages: ['English', 'Hindi', 'French'],
-    license: 'License #RJ1234'
+    name: userProfile?.name || '',
+    email: userProfile?.email || '',
+    phone: userProfile?.phone || '',
+    location: userProfile?.location || '',
+    bio: userProfile?.bio || '',
+    speciality: userProfile?.speciality || '',
+    experience: userProfile?.experience || '',
+    rate: String(userProfile?.guidePrice || ''),
+    languages: Array.isArray(userProfile?.languages) ? userProfile.languages : [],
+    license: userProfile?.license || ''
   })
 
   const [newLanguage, setNewLanguage] = useState('')
 
-  function handleSave() {
-    setSaved(true)
-    setEditing(false)
-    setTimeout(() => setSaved(false), 3000)
+  useEffect(() => {
+    setForm({
+      name: userProfile?.name || '',
+      email: userProfile?.email || '',
+      phone: userProfile?.phone || '',
+      location: userProfile?.location || '',
+      bio: userProfile?.bio || '',
+      speciality: userProfile?.speciality || '',
+      experience: userProfile?.experience || '',
+      rate: String(userProfile?.guidePrice || ''),
+      languages: Array.isArray(userProfile?.languages) ? userProfile.languages : [],
+      license: userProfile?.license || '',
+    })
+  }, [userProfile])
+
+  useEffect(() => {
+    async function loadVerification() {
+      try {
+        const data = await getVerificationStatus()
+        setVerificationStatus(data?.guide?.verification_status || 'not_submitted')
+        setIsVerified(Boolean(data?.guide?.is_verified))
+        setVerifiedAt(data?.guide?.verified_at || null)
+      } catch {
+        setVerificationStatus('not_submitted')
+        setIsVerified(false)
+      }
+    }
+
+    loadVerification()
+  }, [])
+
+  async function handleSave() {
+    if (saving) return
+
+    setSaving(true)
+    setError('')
+    try {
+      await updateUserProfile({
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        location: form.location.trim(),
+        bio: form.bio.trim(),
+        speciality: form.speciality.trim(),
+        experience: form.experience.trim(),
+        guidePrice: Number(form.rate) || 0,
+        languages: form.languages,
+        license: form.license.trim(),
+        updatedAt: new Date().toISOString(),
+      })
+
+      setSaved(true)
+      setEditing(false)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      setError(err.message || 'Could not save profile')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleChange(field, value) {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  function handleCancel() {
+    setForm({
+      name: userProfile?.name || '',
+      email: userProfile?.email || '',
+      phone: userProfile?.phone || '',
+      location: userProfile?.location || '',
+      bio: userProfile?.bio || '',
+      speciality: userProfile?.speciality || '',
+      experience: userProfile?.experience || '',
+      rate: String(userProfile?.guidePrice || ''),
+      languages: Array.isArray(userProfile?.languages) ? userProfile.languages : [],
+      license: userProfile?.license || '',
+    })
+    setEditing(false)
+    setError('')
   }
 
   function addLanguage() {
@@ -49,7 +129,43 @@ export default function ProfilePanel() {
     }))
   }
 
-  const isApproved = userProfile?.certificateStatus === 'approved'
+  async function handleDeactivate() {
+    try {
+      await updateUserProfile({
+        isDeactivated: true,
+        deactivatedAt: new Date().toISOString(),
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      setError(err.message || 'Could not deactivate account')
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleting) return
+
+    const ok = window.confirm('Delete your guide account permanently? This will remove your guide profile, bookings, and verification records from the platform database.')
+    if (!ok) return
+
+    setDeleting(true)
+    setError('')
+    try {
+      await deleteGuideAccount()
+      navigate('/signup')
+    } catch (err) {
+      const message = err.message || 'Could not delete account'
+      if (message.toLowerCase().includes('requires-recent-login')) {
+        setError('For security, please login again and then retry deleting your account.')
+      } else {
+        setError(message)
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const isApproved = isVerified || verificationStatus === 'verified'
 
   return (
     <div className="page-fade-in">
@@ -78,16 +194,17 @@ export default function ProfilePanel() {
         ) : (
           <div className="flex gap-3">
             <button
-              onClick={() => setEditing(false)}
+              onClick={handleCancel}
               className="border border-sand text-charcoal/50 font-garamond text-sm uppercase tracking-wider px-6 py-3 rounded-xl hover:border-charcoal hover:text-charcoal transition-all duration-300 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
+              disabled={saving}
               className="bg-saffron text-charcoal font-garamond text-sm uppercase tracking-widest px-6 py-3 rounded-xl hover:bg-amber-500 transition-all duration-300 cursor-pointer"
             >
-              Save Changes →
+              {saving ? 'Saving...' : 'Save Changes →'}
             </button>
           </div>
         )}
@@ -110,7 +227,7 @@ export default function ProfilePanel() {
             {/* Avatar */}
             <div className="mx-auto mb-4 relative w-28 h-28">
               <div className="absolute inset-0 rounded-full bg-saffron flex items-center justify-center font-playfair text-5xl font-bold text-white">
-                {form.name[0]}
+                {(form.name?.[0] || 'G').toUpperCase()}
               </div>
               <div className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-charcoal flex items-center justify-center text-white text-sm cursor-pointer border-2 border-cream">
                 📷
@@ -119,12 +236,12 @@ export default function ProfilePanel() {
 
             {/* Name */}
             <h2 className="font-playfair text-2xl text-charcoal font-bold mb-1">
-              {form.name}
+              {form.name || 'Guide'}
             </h2>
 
             {/* Location */}
             <p className="font-garamond text-sm text-charcoal/60 mb-3 flex items-center gap-2">
-              <FiMapPin size={14} /> {form.location}
+              <FiMapPin size={14} /> {form.location || 'Location not set'}
             </p>
 
             {/* Rating */}
@@ -163,7 +280,7 @@ export default function ProfilePanel() {
               </div>
               <div className="text-center">
                 <p className="font-playfair text-xl text-charcoal font-bold">
-                  ₹{form.rate}
+                  ₹{form.rate || 0}
                 </p>
                 <p className="font-garamond text-xs text-charcoal/40 mt-0.5">
                   Per Day
@@ -187,10 +304,15 @@ export default function ProfilePanel() {
                       Verified Guide
                     </p>
                     <p className="font-garamond text-xs text-green-600 mt-0.5">
-                      {form.license}
+                      {form.license || 'IITF Verified'}
                     </p>
                   </div>
                 </div>
+                {verifiedAt ? (
+                  <p className="font-garamond text-xs text-green-700 mb-2">
+                    Verified on {new Date(verifiedAt).toLocaleDateString()}
+                  </p>
+                ) : null}
                 <p className="font-garamond text-sm text-green-700">
                   Your certificate has been verified by SafarSathi. You are visible to all
                   tourists.
@@ -202,17 +324,22 @@ export default function ProfilePanel() {
                   <span className="text-2xl">⏳</span>
                   <div>
                     <p className="font-playfair text-base text-amber-800 font-semibold">
-                      Under Review
+                      {verificationStatus === 'rejected' ? 'Rejected' : 'Under Review'}
                     </p>
                     <p className="font-garamond text-xs text-amber-600 mt-0.5">
-                      Submitted · Awaiting approval
+                      {verificationStatus === 'rejected' ? 'Name/enrollment mismatch detected' : 'Submitted · Awaiting approval'}
                     </p>
                   </div>
                 </div>
                 <p className="font-garamond text-sm text-amber-700 mb-4">
-                  Your certificate is being reviewed. This usually takes under 24 hours.
+                  {verificationStatus === 'rejected'
+                    ? 'Please upload your own IITF certificate again from the verification section.'
+                    : 'Your certificate is being reviewed. This usually takes under 24 hours.'}
                 </p>
-                <button className="w-full border border-amber-400 text-amber-700 font-garamond text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-amber-100 transition-all duration-300 text-center cursor-pointer">
+                <button
+                  onClick={() => navigate('/certificate-upload')}
+                  className="w-full border border-amber-400 text-amber-700 font-garamond text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-amber-100 transition-all duration-300 text-center cursor-pointer"
+                >
                   Re-upload Certificate →
                 </button>
               </div>
@@ -255,12 +382,9 @@ export default function ProfilePanel() {
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  readOnly={!editing}
+                  readOnly
                   className={`w-full font-garamond text-base text-charcoal px-4 py-3 rounded-xl transition-colors ${
-                    editing
-                      ? 'bg-cream border border-cream focus:border-saffron focus:outline-none'
-                      : 'bg-cream/50 border border-transparent'
+                    'bg-cream/50 border border-transparent'
                   }`}
                 />
               </div>
@@ -430,6 +554,12 @@ export default function ProfilePanel() {
             )}
           </div>
 
+          {error ? (
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-6">
+              <p className="font-garamond text-sm text-red-700">{error}</p>
+            </div>
+          ) : null}
+
           {/* DANGER ZONE */}
           <div className="bg-red-50 border border-red-100 rounded-3xl p-6">
             <h3 className="font-playfair text-lg text-red-800 font-semibold mb-1">
@@ -450,11 +580,13 @@ export default function ProfilePanel() {
                     Temporarily hide your profile
                   </p>
                 </div>
-                <button className="border border-charcoal/20 text-charcoal/50 font-garamond text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:border-charcoal hover:text-charcoal transition-all cursor-pointer">
+                <button
+                  onClick={handleDeactivate}
+                  className="border border-charcoal/20 text-charcoal/50 font-garamond text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:border-charcoal hover:text-charcoal transition-all cursor-pointer"
+                >
                   Deactivate
                 </button>
               </div>
-
               {/* Delete */}
               <div className="flex items-center justify-between bg-white rounded-xl px-5 py-4">
                 <div>
@@ -465,8 +597,12 @@ export default function ProfilePanel() {
                     Permanently delete all your data
                   </p>
                 </div>
-                <button className="border border-red-200 text-red-400 font-garamond text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:border-red-500 hover:text-red-600 transition-all cursor-pointer">
-                  Delete
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="border border-red-200 text-red-400 font-garamond text-xs uppercase tracking-wider px-4 py-2 rounded-xl hover:border-red-500 hover:text-red-600 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
