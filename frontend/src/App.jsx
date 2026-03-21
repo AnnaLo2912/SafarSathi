@@ -20,27 +20,13 @@ function HomePage() {
     <div className="font-garamond page-fade-in" style={{ backgroundColor: '#FAF9F6' }}>
       <Navbar />
       <div>
-        <div id="home">
-          <Hero />
-        </div>
-      <div id="features">
-        <FeaturesStrip />
-      </div>
-      <div id="how-it-works">
-        <HowItWorks />
-      </div>
-      <div id="safety">
-        <PanicCTA />
-      </div>
-      <div id="destinations">
-        <Destinations />
-      </div>
-      <div id="guides">
-        <GuideNetwork />
-      </div>
-      <div id="contact">
-        <Footer />
-      </div>
+        <div id="home"><Hero /></div>
+        <div id="features"><FeaturesStrip /></div>
+        <div id="how-it-works"><HowItWorks /></div>
+        <div id="safety"><PanicCTA /></div>
+        <div id="destinations"><Destinations /></div>
+        <div id="guides"><GuideNetwork /></div>
+        <div id="contact"><Footer /></div>
       </div>
 
       {/* Floating SOS Button */}
@@ -49,12 +35,10 @@ function HomePage() {
           Panic Alert
         </div>
         <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-terracotta/30 animate-ping pointer-events-none"></div>
+          <div className="absolute inset-0 rounded-full bg-terracotta/30 animate-ping pointer-events-none" />
           <button className="relative w-16 h-16 rounded-full bg-terracotta text-white flex flex-col items-center justify-center shadow-2xl hover:bg-red-700 transition-all duration-300 cursor-pointer border-2 border-white/20">
             <FiAlertCircle size={24} />
-            <span className="font-garamond text-xs font-bold uppercase tracking-wider mt-0.5">
-              SOS
-            </span>
+            <span className="font-garamond text-xs font-bold uppercase tracking-wider mt-0.5">SOS</span>
           </button>
         </div>
       </div>
@@ -62,36 +46,55 @@ function HomePage() {
   )
 }
 
+// Login & Signup wrapped with Navbar so user can navigate back to homepage
+function LoginPage() {
+  return (
+    <>
+      <Navbar />
+      <Login />
+    </>
+  )
+}
+
+function SignupPage() {
+  return (
+    <>
+      <Navbar />
+      <Signup />
+    </>
+  )
+}
+
 export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route 
-          path="/certificate-upload" 
+        <Route path="/"        element={<HomePage />} />
+        <Route path="/login"   element={<LoginPage />} />
+        <Route path="/signup"  element={<SignupPage />} />
+        <Route
+          path="/certificate-upload"
           element={
             <ProtectedRoute allowedRole="guide">
               <CertificateUpload />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/tourist-dashboard" 
+        <Route
+          path="/tourist-dashboard"
           element={
             <ProtectedRoute allowedRole="tourist">
               <TouristDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/guide-dashboard" 
+        <Route
+          path="/guide-dashboard"
           element={
             <ProtectedRoute allowedRole="guide">
               <GuideDashboard />
             </ProtectedRoute>
-          } 
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

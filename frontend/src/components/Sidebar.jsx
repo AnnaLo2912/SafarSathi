@@ -47,37 +47,59 @@ export default function Sidebar({ tabs, activeTab, setActiveTab, isDashboard = '
 
         {/* Navigation Tabs */}
         <nav className="flex-1 overflow-y-auto px-2 py-6 space-y-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center justify-start px-4 py-3 rounded-lg font-garamond text-sm transition-all duration-300 cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-saffron text-charcoal font-semibold'
-                  : 'text-charcoal hover:bg-sand/50'
-              }`}
-              title={!isOpen ? tab.label : ''}
-            >
-              <span className="text-base flex-shrink-0 w-6 text-center">{tab.icon}</span>
-              {isOpen && <span className="ml-4 truncate">{tab.label}</span>}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const hasUnread = tab.badge > 0
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center justify-start px-4 py-3 rounded-lg font-garamond text-sm transition-all duration-300 cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'bg-saffron text-charcoal font-semibold'
+                    : 'text-charcoal hover:bg-sand/50'
+                }`}
+                title={!isOpen ? tab.label : ''}
+              >
+                {/* Icon with red dot */}
+                <span className="relative flex-shrink-0 w-6 text-center text-base">
+                  {tab.icon}
+                  {hasUnread && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none animate-pulse">
+                      {tab.badge > 9 ? '9+' : tab.badge}
+                    </span>
+                  )}
+                </span>
+
+                {/* Label + badge count when sidebar is open */}
+                {isOpen && (
+                  <span className="ml-4 truncate flex items-center gap-2 flex-1">
+                    {tab.label}
+                    {hasUnread && (
+                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                        {tab.badge > 9 ? '9+' : tab.badge}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </nav>
 
-        {/* Footer - Logout Button */}
+        {/* Footer - Logout */}
         <div className="border-t border-coral/20 p-3">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-4 px-4 py-3 rounded-lg font-garamond text-sm text-charcoal hover:bg-sand/50 transition-colors"
             title={!isOpen ? 'Logout' : ''}
           >
-              <span className="text-lg flex-shrink-0"><FiLogOut size={18} /></span>
+            <span className="text-lg flex-shrink-0"><FiLogOut size={18} /></span>
             {isOpen && <span>Logout</span>}
           </button>
         </div>
       </div>
 
-      {/* Toggle Button (Mobile Visible) */}
+      {/* Mobile Toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden fixed bottom-6 right-6 z-40 bg-saffron text-charcoal rounded-full p-3 shadow-lg hover:bg-terracotta transition-colors"

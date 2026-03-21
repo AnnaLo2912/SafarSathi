@@ -1,10 +1,7 @@
 import { useAuth } from '../context/AuthContext'
 import { Navigate } from 'react-router-dom'
 
-export default function ProtectedRoute({ 
-  children, 
-  allowedRole 
-}) {
+export default function ProtectedRoute({ children, allowedRole }) {
   const { currentUser, userRole, userProfile, loading } = useAuth()
 
   // Still fetching auth state — show nothing
@@ -23,12 +20,12 @@ export default function ProtectedRoute({
     )
   }
 
-  // Not logged in — send to login
+  // Not logged in — send to HOME (not login) so navbar works
   if (!currentUser) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/" replace />
   }
 
-  // Logged in but no role/profile document — complete onboarding first
+  // Logged in but no role — complete onboarding
   if (!userRole) {
     return <Navigate to="/signup" replace />
   }
@@ -37,15 +34,10 @@ export default function ProtectedRoute({
     return <Navigate to="/login?deactivated=1" replace />
   }
 
-  // Logged in but wrong role — redirect to their correct dashboard
+  // Wrong role — redirect to correct dashboard
   if (allowedRole && userRole !== allowedRole) {
-    if (userRole === 'guide') {
-      return <Navigate to="/guide-dashboard" replace />
-    } else {
-      return <Navigate to="/tourist-dashboard" replace />
-    }
+    return <Navigate to={userRole === 'guide' ? '/guide-dashboard' : '/tourist-dashboard'} replace />
   }
 
-  // All good — render the page
   return children
 }
