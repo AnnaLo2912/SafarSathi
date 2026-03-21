@@ -44,6 +44,13 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    if (guide.is_deactivated) {
+      return res.status(400).json({
+        success: false,
+        message: "Guide account is deactivated",
+      });
+    }
+
     const booking = await Booking.create({
       tourist_id: req.user.uid,
       touristName: touristName || req.user.name || "Tourist",

@@ -14,12 +14,33 @@ export default function Signup() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { signup, loginWithGoogle } = useAuth()
+  const { signup, loginWithGoogle, currentUser, userRole, completeOnboarding } = useAuth()
   const navigate = useNavigate()
+  const isMissingProfile = Boolean(currentUser && !userRole)
 
   async function handleSignup(e) {
     e.preventDefault()
     setError('')
+
+    if (!role) {
+      return setError('Please select your role first.')
+    }
+
+    if (isMissingProfile) {
+      setLoading(true)
+      try {
+        await completeOnboarding(role, name || currentUser?.displayName || '')
+        if (role === 'guide') {
+          navigate('/certificate-upload')
+        } else {
+          navigate('/tourist-dashboard')
+        }
+      } catch (err) {
+        setError(err.message || 'Could not complete onboarding. Please try again.')
+      }
+      setLoading(false)
+      return
+    }
     
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -44,7 +65,7 @@ export default function Signup() {
     } catch (err) {
       // Better error messages for common Firebase errors
       if (err.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists.')
+        setError('An account with this email already exists. Please sign in with this email to continue onboarding.')
       } else if (err.code === 'auth/invalid-email') {
         setError('Please enter a valid email address.')
       } else if (err.code === 'auth/weak-password') {
@@ -140,6 +161,12 @@ export default function Signup() {
           {/* STEP 1 ROLE SELECTION */}
           {step === 1 && (
             <>
+              {isMissingProfile && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 font-garamond text-sm px-4 py-3 rounded-xl mb-6">
+                  Account profile not found. Please complete onboarding again.
+                </div>
+              )}
+
               {/* Header */}
               <div className="mb-10">
                 <button
@@ -243,6 +270,12 @@ export default function Signup() {
           {/* STEP 2 SIGNUP FORM */}
           {step === 2 && (
             <>
+              {isMissingProfile && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 font-garamond text-sm px-4 py-3 rounded-xl mb-6">
+                  Account profile not found. Please complete onboarding again.
+                </div>
+              )}
+
               {/* Header */}
               <div className="mb-8">
                 <button
@@ -302,45 +335,50 @@ export default function Signup() {
                   <input
                     type="email"
                     required
-                    value={email}
+                    value={isMissingProfile ? (currentUser?.email || '') : email}
                     onChange={(e) => setEmail(e.target.value)}
+                    readOnly={isMissingProfile}
                     className="w-full bg-sand border border-sand focus:border-saffron focus:outline-none font-garamond text-base text-charcoal px-4 py-3 rounded-xl transition-colors"
                     placeholder="you@example.com"
                   />
                 </div>
 
-                {/* Password */}
-                <div>
-                  <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-sand border border-sand focus:border-saffron focus:outline-none font-garamond text-base text-charcoal px-4 py-3 rounded-xl transition-colors"
-                    placeholder="••••••••"
-                  />
-                  <p className="font-garamond text-xs text-charcoal/40 mt-1">
-                    Minimum 6 characters
-                  </p>
-                </div>
+                {!isMissingProfile && (
+                  <>
+                    {/* Password */}
+                    <div>
+                      <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-sand border border-sand focus:border-saffron focus:outline-none font-garamond text-base text-charcoal px-4 py-3 rounded-xl transition-colors"
+                        placeholder="••••••••"
+                      />
+                      <p className="font-garamond text-xs text-charcoal/40 mt-1">
+                        Minimum 6 characters
+                      </p>
+                    </div>
 
-                {/* Confirm Password */}
-                <div>
-                  <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-sand border border-sand focus:border-saffron focus:outline-none font-garamond text-base text-charcoal px-4 py-3 rounded-xl transition-colors"
-                    placeholder="••••••••"
-                  />
-                </div>
+                    {/* Confirm Password */}
+                    <div>
+                      <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
+                        Confirm Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-sand border border-sand focus:border-saffron focus:outline-none font-garamond text-base text-charcoal px-4 py-3 rounded-xl transition-colors"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Submit Button */}
                 <button
@@ -350,6 +388,10 @@ export default function Signup() {
                 >
                   {loading
                     ? 'Creating account...'
+                    : isMissingProfile
+                    ? role === 'guide'
+                      ? 'Complete Onboarding & Upload Certificate →'
+                      : 'Complete Onboarding →'
                     : role === 'guide'
                     ? 'Create Account & Upload Certificate →'
                     : 'Create Account →'}

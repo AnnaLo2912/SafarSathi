@@ -17,6 +17,13 @@ export const toggleAvailability = async (req, res) => {
 
     const existingGuide = await Guide.findOne({ user_id: req.user.uid });
 
+    if (existingGuide?.is_deactivated) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is deactivated. Please reactivate to go online.",
+      });
+    }
+
     if (availability === true && (!existingGuide || !existingGuide.is_verified)) {
       return res.status(403).json({
         success: false,
@@ -36,6 +43,7 @@ export const toggleAvailability = async (req, res) => {
         price: typeof price === "number" ? price : 1500,
         is_verified: existingGuide?.is_verified || false,
         verification_status: existingGuide?.verification_status || "not_submitted",
+        is_deactivated: existingGuide?.is_deactivated || false,
       },
       { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
     );
@@ -64,6 +72,7 @@ export const getGuides = async (req, res) => {
     if (available === "true") {
       query.availability = true;
       query.is_verified = true;
+      query.is_deactivated = { $ne: true };
     }
 
     const guides = await Guide.find(query).sort({ rating: -1, createdAt: -1 });
@@ -72,6 +81,72 @@ export const getGuides = async (req, res) => {
       success: true,
       count: guides.length,
       guides,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// PATCH /api/guide/deactivate
+export const deactivateGuideAccount = async (req, res) => {
+  try {
+    const guide = await Guide.findOneAndUpdate(
+      { user_id: req.user.uid },
+      {
+        $set: {
+          is_deactivated: true,
+          availability: false,
+        },
+        $setOnInsert: {
+          user_id: req.user.uid,
+          name: req.user.name || "Local Guide",
+          full_name: req.user.name || "",
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Your guide account has been deactivated.",
+      guide,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// PATCH /api/guide/reactivate
+export const reactivateGuideAccount = async (req, res) => {
+  try {
+    const guide = await Guide.findOneAndUpdate(
+      { user_id: req.user.uid },
+      {
+        $set: {
+          is_deactivated: false,
+          availability: false,
+        },
+      },
+      { new: true }
+    );
+
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        message: "Guide profile not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Your guide account has been reactivated. You can enable availability after verification.",
+      guide,
     });
   } catch (error) {
     return res.status(500).json({

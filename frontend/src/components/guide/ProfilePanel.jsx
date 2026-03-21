@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FiMapPin } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
-import { getVerificationStatus } from '../../services/bookingService'
+import { deactivateGuideAccountData, getVerificationStatus } from '../../services/bookingService'
 import { useNavigate } from 'react-router-dom'
 
 export default function ProfilePanel() {
@@ -130,13 +130,16 @@ export default function ProfilePanel() {
   }
 
   async function handleDeactivate() {
+    const ok = window.confirm('Deactivate your guide account now? You will be taken offline and redirected to login.')
+    if (!ok) return
+
     try {
+      await deactivateGuideAccountData()
       await updateUserProfile({
         isDeactivated: true,
         deactivatedAt: new Date().toISOString(),
       })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      window.location.replace('/login?deactivated=1')
     } catch (err) {
       setError(err.message || 'Could not deactivate account')
     }
@@ -152,7 +155,7 @@ export default function ProfilePanel() {
     setError('')
     try {
       await deleteGuideAccount()
-      navigate('/signup')
+      window.location.replace('/login')
     } catch (err) {
       const message = err.message || 'Could not delete account'
       if (message.toLowerCase().includes('requires-recent-login')) {

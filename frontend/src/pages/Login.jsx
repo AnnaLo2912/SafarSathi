@@ -1,22 +1,28 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../firebase'
+import { auth, db } from '../firebase'
 import Navbar from '../components/Navbar'
+import { reactivateGuideAccountData } from '../services/bookingService'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [reactivationReady, setReactivationReady] = useState(false)
+  const [reactivating, setReactivating] = useState(false)
 
-  const { login, loginWithGoogle } = useAuth()
+  const { login, loginWithGoogle, logout, updateUserProfile } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const deactivatedFlag = searchParams.get('deactivated') === '1'
 
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
+    setReactivationReady(false)
     setLoading(true)
     try {
       const result = await login(email, password)
@@ -24,6 +30,11 @@ export default function Login() {
       const userDoc = await getDoc(
         doc(db, 'users', result.user.uid)
       )
+      if (userDoc.data()?.isDeactivated) {
+        setError('Your guide account is deactivated. Click Reactivate Account to restore access.')
+        setReactivationReady(true)
+        return
+      }
       const role = userDoc.data()?.role
       if (role === 'guide') {
         navigate('/guide-dashboard')
@@ -40,12 +51,18 @@ export default function Login() {
 
   async function handleGoogleLogin() {
     setError('')
+    setReactivationReady(false)
     setLoading(true)
     try {
       const result = await loginWithGoogle()
       const userDoc = await getDoc(
         doc(db, 'users', result.user.uid)
       )
+      if (userDoc.data()?.isDeactivated) {
+        setError('Your guide account is deactivated. Click Reactivate Account to restore access.')
+        setReactivationReady(true)
+        return
+      }
       const role = userDoc.data()?.role
       if (role === 'guide') {
         navigate('/guide-dashboard')
@@ -58,6 +75,37 @@ export default function Login() {
       setError('Google sign-in failed. Please try again.')
     }
     setLoading(false)
+  }
+
+  async function handleReactivate() {
+    if (reactivating) return
+
+    setReactivating(true)
+    setError('')
+    try {
+      await reactivateGuideAccountData()
+      await updateUserProfile({
+        isDeactivated: false,
+        deactivatedAt: null,
+        reactivatedAt: new Date().toISOString(),
+      })
+      setReactivationReady(false)
+
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid))
+      const role = userDoc.data()?.role
+
+      if (role === 'guide') {
+        navigate('/guide-dashboard')
+      } else if (role === 'tourist') {
+        navigate('/tourist-dashboard')
+      } else {
+        navigate('/signup')
+      }
+    } catch (err) {
+      setError(err.message || 'Could not reactivate account')
+    } finally {
+      setReactivating(false)
+    }
   }
 
   return (
@@ -146,6 +194,22 @@ export default function Login() {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 font-garamond text-sm px-4 py-3 rounded-xl mb-6">
               {error}
+            </div>
+          )}
+
+          {reactivationReady && (
+            <button
+              onClick={handleReactivate}
+              disabled={reactivating}
+              className="w-full bg-saffron text-charcoal font-garamond text-sm uppercase tracking-widest py-4 rounded-xl hover:bg-amber-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mb-6"
+            >
+              {reactivating ? 'Reactivating...' : 'Reactivate Account'}
+            </button>
+          )}
+
+          {!error && deactivatedFlag && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 font-garamond text-sm px-4 py-3 rounded-xl mb-6">
+              Your account has been deactivated successfully.
             </div>
           )}
 

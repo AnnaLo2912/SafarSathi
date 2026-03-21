@@ -23,6 +23,11 @@ const guideSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    is_deactivated: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     verification_status: {
       type: String,
       enum: ["not_submitted", "processing", "verified", "rejected"],
