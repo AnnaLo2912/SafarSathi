@@ -293,9 +293,104 @@ function TripCard({ trip, onViewDetails, onDelete }) {
   )
 }
 
+// ── Live weather hook — re-fetches on modal open ─────────────
+function useLiveWeather(lat, lon, startDate, duration) {
+  const [weather,     setWeather]     = useState(null)  // null = loading
+  const [weatherType, setWeatherType] = useState(null)  // 'forecast' | 'historical'
+
+  useEffect(() => {
+    if (!lat || !lon) return
+    let cancelled = false
+
+    async function fetchWeather() {
+      try {
+        const interpretCode = (code) => {
+          if (code <= 3)  return 'Sunny/Clear'
+          if (code <= 67) return 'Rainy/Drizzle'
+          if (code <= 77) return 'Snowy'
+          return 'Thunderstorm'
+        }
+
+        const today     = new Date(); today.setHours(0,0,0,0)
+        const tripStart = startDate ? new Date(startDate) : null
+        if (tripStart) tripStart.setHours(0,0,0,0)
+        const daysUntil = tripStart ? Math.ceil((tripStart - today) / 86400000) : -1
+        const days      = duration || 3
+
+        let url, type
+
+        if (!tripStart || daysUntil < 0) {
+          // Trip already started or no date — live forecast for today
+          url  = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=${Math.min(days + 1, 16)}`
+          type = 'forecast'
+        } else if (daysUntil <= 14) {
+          // Within 2 weeks — real forecast sliced to travel days
+          url  = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=${Math.min(daysUntil + days + 1, 16)}`
+          type = 'forecast'
+        } else {
+          // Too far ahead — same period last year
+          const s = new Date(tripStart); s.setFullYear(s.getFullYear() - 1)
+          const e = new Date(s); e.setDate(e.getDate() + days)
+          const fmt = (d) => d.toISOString().split('T')[0]
+          url  = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&start_date=${fmt(s)}&end_date=${fmt(e)}`
+          type = 'historical'
+        }
+
+        const res   = await fetch(url)
+        const data  = await res.json()
+        const daily = data.daily
+
+        let result = daily.time.map((_, i) => {
+          const actualDate = tripStart ? new Date(tripStart) : new Date()
+          actualDate.setDate(actualDate.getDate() + i)
+          return {
+            date:      actualDate.toISOString(),
+            tempMax:   daily.temperature_2m_max[i],
+            tempMin:   daily.temperature_2m_min[i],
+            condition: interpretCode(daily.weathercode[i]),
+            type,
+          }
+        })
+
+        // For live forecast, filter to only travel days
+        if (type === 'forecast' && tripStart && daysUntil >= 0 && daysUntil <= 14) {
+          result = result.filter((_, i) => i >= daysUntil).slice(0, days + 1)
+        } else {
+          result = result.slice(0, days + 1)
+        }
+
+        if (!cancelled) {
+          setWeather(result)
+          setWeatherType(type)
+        }
+      } catch (err) {
+        console.error('Live weather fetch error:', err)
+        if (!cancelled) setWeather([]) // empty on error — fallback to stored
+      }
+    }
+
+    fetchWeather()
+    return () => { cancelled = true }
+  }, [lat, lon, startDate, duration])
+
+  return { weather, weatherType }
+}
+
 // ── Full Trip Detail Modal ────────────────────────────────────
 function TripDetailModal({ trip, onClose }) {
   if (!trip) return null
+
+  // Re-fetch weather live every time modal opens
+  const { weather: liveWeather, weatherType } = useLiveWeather(
+    trip.lat,
+    trip.lon,
+    trip.startDate,
+    trip.duration
+  )
+
+  // Use live weather if available, fall back to stored weather
+  const displayWeather = liveWeather ?? trip.weather ?? []
+  const isLoading      = liveWeather === null && (trip.lat && trip.lon)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 overflow-y-auto">
@@ -356,26 +451,60 @@ function TripDetailModal({ trip, onClose }) {
               </div>
             )}
 
-            {/* Weather */}
-            {trip.weather?.length > 0 && (
+            {/* Weather — live re-fetched on open */}
+            {(displayWeather.length > 0 || isLoading) && (
               <div>
-                <h3 className="font-playfair text-xl text-charcoal font-bold mb-4">
-                  🌤 Weather Forecast
-                </h3>
-                <div className="flex gap-4 overflow-x-auto pb-2">
-                  {trip.weather.map((w, i) => (
-                    <div key={i} className="bg-sand rounded-2xl p-4 text-center min-w-[100px]">
-                      <div className="font-garamond text-xs text-charcoal/50 mb-2">
-                        {new Date(w.date).toLocaleDateString('en', { weekday: 'short', day: 'numeric' })}
-                      </div>
-                      <div className="text-3xl mb-2">
-                        {w.condition === 'Sunny/Clear' ? '☀️' : w.condition === 'Rainy/Drizzle' ? '🌧️' : w.condition === 'Snowy' ? '❄️' : '⛈️'}
-                      </div>
-                      <div className="font-playfair text-lg text-charcoal font-bold">{Math.round(w.tempMax)}°C</div>
-                      <div className="font-garamond text-xs text-charcoal/40">{Math.round(w.tempMin)}°C</div>
+                <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                  <h3 className="font-playfair text-xl text-charcoal font-bold">
+                    🌤 Weather Forecast
+                  </h3>
+                  {isLoading && (
+                    <div className="font-garamond text-xs text-charcoal/40 bg-sand px-4 py-2 rounded-full animate-pulse">
+                      Fetching latest weather...
                     </div>
-                  ))}
+                  )}
+                  {!isLoading && weatherType === 'forecast' && (
+                    <div className="font-garamond text-xs text-green-600 bg-green-50 px-4 py-2 rounded-full border border-green-200">
+                      ✅ Live forecast for your travel dates
+                    </div>
+                  )}
+                  {!isLoading && weatherType === 'historical' && (
+                    <div className="font-garamond text-xs text-charcoal/50 bg-sand px-4 py-2 rounded-full border border-sand">
+                      📊 Based on last year's data — actual may vary
+                    </div>
+                  )}
                 </div>
+
+                {isLoading ? (
+                  <div className="flex gap-4">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="bg-sand rounded-2xl p-4 text-center min-w-[100px] animate-pulse">
+                        <div className="h-3 bg-charcoal/10 rounded mb-3 mx-2" />
+                        <div className="text-3xl mb-2 opacity-20">🌤</div>
+                        <div className="h-4 bg-charcoal/10 rounded mb-1 mx-4" />
+                        <div className="h-3 bg-charcoal/10 rounded mx-6" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto pb-2">
+                    {displayWeather.map((w, i) => (
+                      <div key={i} className="bg-sand rounded-2xl p-4 text-center min-w-[100px]">
+                        <div className="font-garamond text-xs text-charcoal/50 mb-2">
+                          {(() => {
+                            const [y, m, d] = w.date.toString().split('T')[0].split('-')
+                            return new Date(+y, +m - 1, +d).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })
+                          })()}
+                        </div>
+                        <div className="text-3xl mb-2">
+                          {w.condition === 'Sunny/Clear' ? '☀️' : w.condition === 'Rainy/Drizzle' ? '🌧️' : w.condition === 'Snowy' ? '❄️' : '⛈️'}
+                        </div>
+                        <div className="font-playfair text-lg text-charcoal font-bold">{Math.round(w.tempMax)}°C</div>
+                        <div className="font-garamond text-xs text-charcoal/40">{Math.round(w.tempMin)}°C</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -386,7 +515,18 @@ function TripDetailModal({ trip, onClose }) {
                   🗓 Day-wise Itinerary
                 </h3>
                 <div className="space-y-4">
-                  {trip.dayPlans.map((day) => (
+                  {trip.dayPlans.map((day) => {
+                    // Compute actual date for this day if startDate exists
+                    let dayDate = null
+                    if (trip.startDate) {
+                      const d = new Date(trip.startDate)
+                      d.setDate(d.getDate() + (day.day - 1))
+                      dayDate = d.toLocaleDateString('en-IN', {
+                        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                      })
+                    }
+
+                    return (
                     <div key={day.day} className="bg-sand rounded-2xl overflow-hidden">
                       {/* Day Header */}
                       <div className={`px-6 py-4 flex items-center justify-between
@@ -394,7 +534,7 @@ function TripDetailModal({ trip, onClose }) {
                       >
                         <div>
                           <div className="font-garamond text-xs uppercase tracking-widest text-white/70">
-                            Day {day.day}
+                            Day {day.day}{dayDate ? ` · ${dayDate}` : ''}
                           </div>
                           <h4 className="font-playfair text-lg text-white font-bold">
                             {day.title}
@@ -462,7 +602,8 @@ function TripDetailModal({ trip, onClose }) {
                         )}
                       </div>
                     </div>
-                  ))}
+                    ) // end return
+                  })} {/* end dayPlans.map */}
                 </div>
               </div>
             )}

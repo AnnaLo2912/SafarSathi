@@ -52,6 +52,9 @@ function HeroBanner({ itinerary }) {
         </h2>
         <div className="flex flex-wrap items-center gap-4 font-garamond text-sm text-white/70">
           <span>📅 {itinerary.duration}</span>
+          {itinerary.startDate && itinerary.endDate && (
+            <span>🗓 {new Date(itinerary.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} → {itinerary.endDate}</span>
+          )}
           <span className="flex items-center gap-2"><FiDollarSign size={16} /> {itinerary.totalBudget} budget</span>
           <span>🌤 {itinerary.weather}</span>
         </div>
@@ -70,7 +73,7 @@ function DayCard({ day, destination }) {
       <div className={`${day.themeColor} px-8 py-4 flex items-center justify-between`}>
         <div>
           <div className="font-garamond text-xs uppercase tracking-widest text-white/70">
-            Day {day.day}
+            Day {day.day}{day.dayDate ? ` · ${day.dayDate}` : ''}
           </div>
           <h4 className="font-playfair text-xl text-white font-bold">
             {day.title}
@@ -297,6 +300,7 @@ export default function TripPlanner() {
   const [budget,    setBudget]    = useState('150')
   const [travelers, setTravelers] = useState('1')
   const [tripStyle, setTripStyle] = useState('budget')
+  const [startDate, setStartDate] = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
   const [itinerary, setItinerary] = useState(null)
@@ -333,6 +337,7 @@ export default function TripPlanner() {
           budget:      parseFloat(budget),
           travelers:   parseInt(travelers),
           tripStyle,
+          startDate:   startDate || undefined,
         }),
       })
 
@@ -349,29 +354,43 @@ export default function TripPlanner() {
         summary:     trip.summary,
         highlights:  trip.highlights || [],
         bestTime:    'Oct – March',
+        startDate:   startDate || null,
+        endDate:     startDate
+          ? (() => { const d = new Date(startDate); d.setDate(d.getDate() + trip.duration); return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) })()
+          : null,
         weather:     trip.weather?.length > 0
           ? `${Math.round(trip.weather[0].tempMax)}°C, ${trip.weather[0].condition}`
           : 'Check local forecast',
         weatherFull: trip.weather || [],
 
-        days: (trip.dayPlans || []).map((day) => ({
-          day:        day.day,
-          title:      day.title,
-          theme:      'Culture & Exploration',
-          themeColor: ['bg-saffron', 'bg-terracotta', 'bg-deepblue'][(day.day - 1) % 3],
-          activities: (day.attractions || []).map((a) => ({
-            time:     a.timing   || '10:00 AM',
-            name:     a.name,
-            type:     a.category || 'Sightseeing',
-            cost:     a.entryFee > 0 ? `$${a.entryFee}` : 'Free',
-            costINR:  a.entryFeeINR > 0 ? `₹${a.entryFeeINR}` : 'Free',
-            duration: '1-2 hrs',
-            tip:      a.tips || '',
-          })),
-          meals:     day.meals,
-          transport: day.transport,
-          dayTotal:  day.dayTotal,
-        })),
+        days: (trip.dayPlans || []).map((day) => {
+          // Compute actual date for each day if startDate provided
+          let dayDate = null
+          if (startDate) {
+            const d = new Date(startDate)
+            d.setDate(d.getDate() + (day.day - 1))
+            dayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
+          }
+          return {
+            day:        day.day,
+            dayDate,
+            title:      day.title,
+            theme:      'Culture & Exploration',
+            themeColor: ['bg-saffron', 'bg-terracotta', 'bg-deepblue'][(day.day - 1) % 3],
+            activities: (day.attractions || []).map((a) => ({
+              time:     a.timing   || '10:00 AM',
+              name:     a.name,
+              type:     a.category || 'Sightseeing',
+              cost:     a.entryFee > 0 ? `$${a.entryFee}` : 'Free',
+              costINR:  a.entryFeeINR > 0 ? `₹${a.entryFeeINR}` : 'Free',
+              duration: '1-2 hrs',
+              tip:      a.tips || '',
+            })),
+            meals:     day.meals,
+            transport: day.transport,
+            dayTotal:  day.dayTotal,
+          }
+        }),
 
         hotels: (trip.hotelOptions || []).map((h, i) => ({
           name:       h.name,
@@ -469,6 +488,16 @@ export default function TripPlanner() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">Travel Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
+                />
+              </div>
+              <div>
                 <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">Number of Nights</label>
                 <select value={nights} onChange={(e) => setNights(e.target.value)}
                   className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors">
@@ -477,14 +506,14 @@ export default function TripPlanner() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">Budget (USD)</label>
                 <input type="number" min="50" value={budget} onChange={(e) => setBudget(e.target.value)}
                   className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors" />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">Travelers</label>
                 <select value={travelers} onChange={(e) => setTravelers(e.target.value)}
@@ -494,14 +523,30 @@ export default function TripPlanner() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">Trip Style</label>
-                <select value={tripStyle} onChange={(e) => setTripStyle(e.target.value)}
-                  className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors">
-                  <option value="budget">Budget</option>
-                  <option value="comfort">Comfort</option>
-                  <option value="luxury">Luxury</option>
-                </select>
+            </div>
+
+            <div>
+              <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">Trip Style</label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 'budget',  label: '🎒 Budget',  desc: 'Affordable & local' },
+                  { value: 'comfort', label: '🏨 Comfort', desc: 'Mid-range & relaxed' },
+                  { value: 'luxury',  label: '✨ Luxury',  desc: 'Premium & exclusive' },
+                ].map((style) => (
+                  <button
+                    key={style.value}
+                    type="button"
+                    onClick={() => setTripStyle(style.value)}
+                    className={`rounded-2xl px-4 py-3 text-left transition-all duration-200 border-2
+                      ${tripStyle === style.value
+                        ? 'border-saffron bg-saffron/10'
+                        : 'border-sand bg-cream hover:border-saffron/40'
+                      }`}
+                  >
+                    <div className="font-garamond text-sm font-semibold text-charcoal">{style.label}</div>
+                    <div className="font-garamond text-xs text-charcoal/50 mt-0.5">{style.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -584,12 +629,27 @@ export default function TripPlanner() {
       {/* WEATHER */}
       {itinerary.weatherFull?.length > 0 && (
         <div className="bg-sand rounded-3xl p-8 mb-10">
-          <h3 className="font-playfair text-2xl text-charcoal font-bold mb-6">🌤 Weather Forecast</h3>
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+            <h3 className="font-playfair text-2xl text-charcoal font-bold">🌤 Weather Forecast</h3>
+            {itinerary.weatherFull[0]?.type === 'historical' && (
+              <div className="font-garamond text-xs text-charcoal/50 bg-cream px-4 py-2 rounded-full border border-sand">
+                📊 Based on last year's data — actual may vary
+              </div>
+            )}
+            {itinerary.weatherFull[0]?.type === 'forecast' && itinerary.startDate && (
+              <div className="font-garamond text-xs text-green-600 bg-green-50 px-4 py-2 rounded-full border border-green-200">
+                ✅ Live forecast for your travel dates
+              </div>
+            )}
+          </div>
           <div className="flex gap-4 overflow-x-auto pb-2">
             {itinerary.weatherFull.map((w, i) => (
               <div key={i} className="bg-cream rounded-2xl p-4 text-center min-w-[100px]">
                 <div className="font-garamond text-xs text-charcoal/50 mb-2">
-                  {new Date(w.date).toLocaleDateString('en', { weekday: 'short', day: 'numeric' })}
+                  {(() => {
+                    const [y, m, d] = w.date.toString().split('T')[0].split('-')
+                    return new Date(+y, +m - 1, +d).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })
+                  })()}
                 </div>
                 <div className="text-3xl mb-2">
                   {w.condition === 'Sunny/Clear' ? '☀️' : w.condition === 'Rainy/Drizzle' ? '🌧️' : w.condition === 'Snowy' ? '❄️' : '⛈️'}
@@ -713,7 +773,7 @@ export default function TripPlanner() {
             Book a Guide →
           </button>
           <button
-            onClick={() => { setItinerary(null); setRawTrip(null); setError(null); setSaved(false) }}
+            onClick={() => { setItinerary(null); setRawTrip(null); setError(null); setSaved(false); setStartDate('') }}
             className="flex-1 md:flex-none border border-charcoal text-charcoal font-garamond text-sm uppercase tracking-wider px-8 py-3 rounded-xl hover:bg-charcoal hover:text-cream transition-all duration-300">
             ← Plan Another
           </button>
