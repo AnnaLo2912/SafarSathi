@@ -5,7 +5,7 @@ export default function ProtectedRoute({
   children, 
   allowedRole 
 }) {
-  const { currentUser, userRole, loading } = useAuth()
+  const { currentUser, userRole, userProfile, loading } = useAuth()
 
   // Still fetching auth state — show nothing
   if (loading) {
@@ -31,6 +31,10 @@ export default function ProtectedRoute({
   // Logged in but no role/profile document — complete onboarding first
   if (!userRole) {
     return <Navigate to="/signup" replace />
+  }
+
+  if (userProfile?.isDeactivated) {
+    return <Navigate to="/login?deactivated=1" replace />
   }
 
   // Logged in but wrong role — redirect to their correct dashboard

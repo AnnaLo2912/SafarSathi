@@ -113,3 +113,23 @@ export async function deleteGuideAccountData() {
 
   return handleResponse(response);
 }
+
+export async function deactivateGuideAccountData() {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/guide/deactivate`, {
+    method: "PATCH",
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+export async function reactivateGuideAccountData() {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/guide/reactivate`, {
+    method: "PATCH",
+    headers,
+  });
+
+  return handleResponse(response);
+}
