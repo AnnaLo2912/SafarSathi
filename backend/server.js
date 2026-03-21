@@ -1,10 +1,16 @@
 import 'dotenv/config';
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import tripRoutes from "./routes/trip.routes.js";
 import guideRoutes from "./routes/guide.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
+import verificationRoutes from "./routes/verification.routes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Connect MongoDB
 connectDB();
@@ -13,16 +19,25 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors({
-  origin: [
-    "http://localhost:5173",  // Vite default
-    "http://localhost:5175",  // Current frontend dev
-    "http://localhost:5176",  // Vite alternate port
-    "http://localhost:3000",  // CRA default
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      "http://localhost:3000",
+    ];
+
+    const isLocalhostPort = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+    if (allowedOrigins.includes(origin) || isLocalhostPort) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ── Health Check ──────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
@@ -38,6 +53,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/guide", guideRoutes);
 app.use("/api/guides", guideRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/verification", verificationRoutes);
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use((req, res) => {

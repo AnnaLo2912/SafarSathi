@@ -13,10 +13,34 @@ const guideSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    full_name: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    is_verified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    verification_status: {
+      type: String,
+      enum: ["not_submitted", "processing", "verified", "rejected"],
+      default: "not_submitted",
+      index: true,
+    },
     availability: {
       type: Boolean,
       default: false,
       index: true,
+    },
+    ocr_last_result: {
+      type: Object,
+      default: null,
+    },
+    verified_at: {
+      type: Date,
+      default: null,
     },
     location: {
       type: String,
@@ -39,6 +63,13 @@ const guideSchema = new mongoose.Schema(
 );
 
 guideSchema.index({ availability: 1, location: 1 });
+
+guideSchema.pre("save", function enforceAvailabilityGate(next) {
+  if (this.availability && !this.is_verified) {
+    return next(new Error("Availability can only be enabled for verified guides"));
+  }
+  return next();
+});
 
 const Guide = mongoose.model("Guide", guideSchema);
 export default Guide;

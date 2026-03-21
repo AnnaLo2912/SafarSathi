@@ -4,10 +4,12 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  signOut
+  signOut,
+  deleteUser
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore'
 import { auth, db, googleProvider } from '../firebase'
+import { deleteGuideAccountData } from '../services/bookingService'
 
 const AuthContext = createContext()
 
@@ -86,7 +88,32 @@ export function AuthProvider({ children }) {
       setUserProfile(data)
       return data
     }
+    setUserRole(null)
+    setUserProfile(null)
     return null
+  }
+
+  async function updateUserProfile(patch) {
+    if (!currentUser?.uid) {
+      throw new Error('Please login to continue')
+    }
+
+    await setDoc(doc(db, 'users', currentUser.uid), patch, { merge: true })
+    setUserProfile((prev) => ({ ...(prev || {}), ...patch }))
+  }
+
+  async function deleteGuideAccount() {
+    if (!currentUser?.uid) {
+      throw new Error('Please login to continue')
+    }
+
+    await deleteGuideAccountData()
+    await deleteDoc(doc(db, 'users', currentUser.uid))
+    await deleteUser(currentUser)
+
+    setUserRole(null)
+    setUserProfile(null)
+    setCurrentUser(null)
   }
 
   // Listen to auth state changes
@@ -113,7 +140,9 @@ export function AuthProvider({ children }) {
     login,
     loginWithGoogle,
     logout,
-    fetchUserProfile
+    fetchUserProfile,
+    updateUserProfile,
+    deleteGuideAccount,
   }
 
   return (

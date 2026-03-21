@@ -28,9 +28,40 @@ async function handleResponse(response) {
 export async function toggleGuideAvailability(payload) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${BACKEND_URL}/api/guide/availability`, {
-    method: "POST",
+    method: "PATCH",
     headers,
     body: JSON.stringify(payload),
+  });
+
+  return handleResponse(response);
+}
+
+export async function getVerificationStatus() {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/verification/status`, {
+    method: "GET",
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+export async function uploadCertificateForVerification(file, declaredFullName = "") {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Please login to continue");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("declared_full_name", declaredFullName);
+
+  const response = await fetch(`${BACKEND_URL}/api/verification/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
   });
 
   return handleResponse(response);
@@ -67,6 +98,16 @@ export async function getBookings(role) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${BACKEND_URL}/api/bookings?role=${role}`, {
     method: "GET",
+    headers,
+  });
+
+  return handleResponse(response);
+}
+
+export async function deleteGuideAccountData() {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/guide/account`, {
+    method: "DELETE",
     headers,
   });
 

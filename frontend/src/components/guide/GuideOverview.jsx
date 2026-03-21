@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FiClock, FiMapPin, FiToggleLeft, FiToggleRight, FiUser } from 'react-icons/fi'
+import { FiCheckCircle, FiClock, FiMapPin, FiToggleLeft, FiToggleRight, FiUpload, FiUser, FiXCircle } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
-import { getBookings, toggleGuideAvailability } from '../../services/bookingService'
+import {
+  getBookings,
+  getVerificationStatus,
+  toggleGuideAvailability,
+  uploadCertificateForVerification,
+} from '../../services/bookingService'
 
 const badgeByStatus = {
   pending: 'bg-amber-100 text-amber-700',
@@ -13,9 +18,16 @@ const badgeByStatus = {
 export default function GuideOverview() {
   const { userProfile } = useAuth()
   const [available, setAvailable] = useState(false)
+  const [verificationStatus, setVerificationStatus] = useState('not_submitted')
+  const [isVerified, setIsVerified] = useState(false)
+  const [verificationBusy, setVerificationBusy] = useState(false)
+  const [certificateFile, setCertificateFile] = useState(null)
+  const [examUrl, setExamUrl] = useState('https://iitf.gov.in/login/index.php')
+  const [ocrResult, setOcrResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [bookings, setBookings] = useState([])
   const [error, setError] = useState('')
+  const [verifyError, setVerifyError] = useState('')
 
   useEffect(() => {
     setAvailable(Boolean(userProfile?.availability))
@@ -23,6 +35,7 @@ export default function GuideOverview() {
 
   useEffect(() => {
     loadBookings()
+    loadVerificationState()
   }, [])
 
   async function loadBookings() {
@@ -34,8 +47,65 @@ export default function GuideOverview() {
     }
   }
 
+  async function loadVerificationState() {
+    try {
+      const data = await getVerificationStatus()
+      const guide = data.guide || {}
+      setIsVerified(Boolean(guide.is_verified))
+      setVerificationStatus(guide.verification_status || 'not_submitted')
+      setAvailable(Boolean(guide.availability))
+      setOcrResult(guide.ocr_last_result || null)
+    } catch (err) {
+      setVerifyError(err.message || 'Could not load verification status')
+    }
+  }
+
+  async function handleUploadVerification() {
+    if (verificationBusy) return
+    if (!certificateFile) {
+      setVerifyError('Please select a certificate file before uploading.')
+      return
+    }
+
+    setVerificationBusy(true)
+    setVerifyError('')
+
+    try {
+      const response = await uploadCertificateForVerification(
+        certificateFile,
+        userProfile?.name || ''
+      )
+      setExamUrl(response.iitf_exam_url || examUrl)
+      setVerificationStatus(response.verification_status || 'not_submitted')
+      setIsVerified(Boolean(response.is_verified))
+      setOcrResult({
+        extracted_name: response.extracted_name,
+        extracted_enrollment_no: response.extracted_enrollment_no,
+        confidence: response.confidence,
+        match_result: response.match_result,
+      })
+      if (!response.is_verified) {
+        setAvailable(false)
+      }
+    } catch (err) {
+      const message = err?.message || 'Could not verify certificate. Please try again.'
+      if (message.toLowerCase().includes('fetch')) {
+        setVerifyError('Could not connect to backend. Confirm server is running and refresh this page.')
+      } else {
+        setVerifyError(message)
+      }
+    } finally {
+      setVerificationBusy(false)
+    }
+  }
+
   async function handleToggleAvailability() {
     if (busy) return
+
+    if (!isVerified) {
+      setError('Please verify your IITF certification to go online.')
+      return
+    }
 
     const nextValue = !available
     setBusy(true)
@@ -80,10 +150,10 @@ export default function GuideOverview() {
 
           <button
             onClick={handleToggleAvailability}
-            disabled={busy}
+            disabled={busy || !isVerified}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white transition-colors ${
               available ? 'bg-green-600 hover:bg-green-700' : 'bg-slate-500 hover:bg-slate-600'
-            } ${busy ? 'opacity-60 cursor-not-allowed' : ''}`}
+            } ${busy || !isVerified ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             {available ? <FiToggleRight size={20} /> : <FiToggleLeft size={20} />}
             {available ? 'Set Offline' : 'Set Available'}
@@ -93,6 +163,71 @@ export default function GuideOverview() {
         {error ? (
           <p className="mt-3 text-sm text-red-600 font-garamond">{error}</p>
         ) : null}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-playfair text-2xl text-charcoal font-semibold">IITF Verification</h3>
+            <p className="font-garamond text-charcoal/70 mt-1">Upload IITF certificate to get verified.</p>
+          </div>
+          {verificationStatus === 'verified' ? (
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
+              <FiCheckCircle /> Verified Guide
+            </span>
+          ) : null}
+        </div>
+
+        {verificationStatus === 'processing' ? (
+          <p className="text-amber-700 font-garamond">Verifying your certificate...</p>
+        ) : null}
+
+        {verificationStatus === 'rejected' ? (
+          <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+            <p className="text-red-700 font-garamond flex items-center gap-2">
+              <FiXCircle /> Certificate not recognized.
+            </p>
+            <a
+              href={examUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center mt-3 px-4 py-2 rounded-lg bg-saffron text-charcoal font-semibold hover:bg-terracotta transition-colors"
+            >
+              Verify yourself via IITF Exam
+            </a>
+          </div>
+        ) : null}
+
+        {verificationStatus !== 'verified' ? (
+          <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(event) => setCertificateFile(event.target.files?.[0] || null)}
+              className="w-full text-sm font-garamond"
+            />
+            <button
+              onClick={handleUploadVerification}
+              disabled={!certificateFile || verificationBusy}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-charcoal text-white transition-colors ${
+                !certificateFile || verificationBusy ? 'opacity-60 cursor-not-allowed' : 'hover:bg-charcoal/90'
+              }`}
+            >
+              <FiUpload /> {verificationBusy ? 'Uploading...' : 'Upload Certificate'}
+            </button>
+          </div>
+        ) : null}
+
+        {ocrResult ? (
+          <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 text-sm font-garamond text-charcoal/80 space-y-1">
+            <p>Extracted Name: {ocrResult.extracted_name || 'N/A'}</p>
+            <p>Extracted Enrollment No: {ocrResult.extracted_enrollment_no || 'N/A'}</p>
+            <p>Confidence: {typeof ocrResult.confidence === 'number' ? ocrResult.confidence : 'N/A'}</p>
+            <p>Match Result: {ocrResult.match_result || 'N/A'}</p>
+          </div>
+        ) : null}
+
+        {verifyError ? <p className="text-sm text-red-600 font-garamond">{verifyError}</p> : null}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

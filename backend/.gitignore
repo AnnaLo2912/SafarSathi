@@ -30,3 +30,8 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# OCR generated artifacts
+uploads/
+*.traineddata
+tessdata/
