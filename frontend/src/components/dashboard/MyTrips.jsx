@@ -1,8 +1,297 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../../firebase'
 import { FiDollarSign, FiX, FiUser, FiPackage, FiBriefcase, FiAward, FiHome } from 'react-icons/fi'
+import { getPlaceImage } from '../../services/unsplash'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+
+// ── Unsplash Image Hook ───────────────────────────────────────
+function useUnsplashImage(query, enabled = true) {
+  const [imgUrl, setImgUrl] = useState(null)
+  const [imgLoading, setImgLoading] = useState(false)
+
+  useEffect(() => {
+    if (!query || !enabled) return
+    let cancelled = false
+    setImgLoading(true)
+    getPlaceImage(query).then((url) => {
+      if (!cancelled) {
+        setImgUrl(url)
+        setImgLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [query, enabled])
+
+  return { imgUrl, imgLoading }
+}
+
+// ── Blurred Hero Image ────────────────────────────────────────
+function HeroImage({ query, children, className = '' }) {
+  const { imgUrl } = useUnsplashImage(query)
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* Background image */}
+      {imgUrl && (
+        <img
+          src={imgUrl}
+          alt={query}
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+        />
+      )}
+      {/* Dark overlay for text legibility */}
+      <div className="absolute inset-0 bg-charcoal/70" />
+      {/* Content */}
+      <div className="relative z-10">{children}</div>
+    </div>
+  )
+}
+
+// ── Hotel Card with Unsplash Image ────────────────────────────
+function HotelCard({ hotel, destination }) {
+  const query = `${hotel.name} hotel ${destination}`
+  const { imgUrl, imgLoading } = useUnsplashImage(query)
+
+  return (
+    <div className="bg-sand rounded-2xl overflow-hidden">
+      {/* Hotel Image */}
+      <div className="relative h-36 bg-charcoal/20">
+        {imgLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin text-2xl">🏨</div>
+          </div>
+        )}
+        {imgUrl && (
+          <img
+            src={imgUrl}
+            alt={hotel.name}
+            className="w-full h-full object-cover"
+          />
+        )}
+        {!imgUrl && !imgLoading && (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-30">
+            🏨
+          </div>
+        )}
+        {/* Stars overlay */}
+        <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+          <span className="font-garamond text-xs text-yellow-300">
+            {'⭐'.repeat(Math.min(hotel.stars || 3, 5))}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <h4 className="font-playfair text-lg text-charcoal font-bold mb-1">{hotel.name}</h4>
+        <div className="font-playfair text-2xl text-charcoal font-bold mb-1">
+          ${hotel.pricePerNight}
+          <span className="font-garamond text-sm text-charcoal/50 font-normal">/night</span>
+        </div>
+        {hotel.priceINR && (
+          <div className="font-garamond text-sm text-charcoal/50 mb-3">
+            ₹{hotel.priceINR?.toLocaleString('en-IN')}/night
+          </div>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          {hotel.amenities?.map((a, ai) => (
+            <span key={ai} className="bg-cream font-garamond text-xs text-charcoal/60 px-2 py-1 rounded-full">
+              {a}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Attraction Card with Unsplash Image ───────────────────────
+function AttractionCard({ attraction, destination }) {
+  const query = `${attraction.name} ${destination}`
+  const { imgUrl } = useUnsplashImage(query)
+
+  return (
+    <div className="bg-cream rounded-xl overflow-hidden flex flex-col">
+      {/* Image with overlaid badges — fixed height */}
+      <div className="relative shrink-0">
+        {imgUrl ? (
+          <div className="h-48 overflow-hidden">
+            <img
+              src={imgUrl}
+              alt={attraction.name}
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+            />
+          </div>
+        ) : (
+          <div className="h-48 bg-sand animate-pulse flex items-center justify-center text-5xl opacity-20">
+            🏛️
+          </div>
+        )}
+        {attraction.timing && (
+          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white font-garamond text-sm px-3 py-1.5 rounded-full">
+            🕐 {attraction.timing}
+          </div>
+        )}
+        <div className={`absolute top-3 right-3 bg-black/60 backdrop-blur-sm font-playfair text-sm font-bold px-3 py-1.5 rounded-full ${attraction.entryFee > 0 ? 'text-yellow-300' : 'text-green-300'}`}>
+          {attraction.entryFee > 0 ? `$${attraction.entryFee}` : 'Free'}
+        </div>
+      </div>
+
+      {/* Text content */}
+      <div className="px-5 py-5 flex flex-col flex-1">
+        {/* Name */}
+        <h5 className="font-playfair text-lg text-charcoal font-bold leading-snug mb-1">
+          {attraction.name}
+        </h5>
+        {attraction.entryFeeINR > 0 && (
+          <div className="font-garamond text-base text-charcoal/60 font-semibold mb-3">
+            ₹{attraction.entryFeeINR}
+          </div>
+        )}
+
+        {/* Category + duration */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          {attraction.category && (
+            <span className="font-garamond text-sm font-semibold text-charcoal/70 bg-sand px-3 py-1 rounded-full">
+              {attraction.category}
+            </span>
+          )}
+          <span className="font-garamond text-sm text-charcoal/50">⏱ 1-2 hrs</span>
+        </div>
+
+        {/* Description + Tip — flex-1 pushes Maps button to bottom */}
+        <div className="flex-1 space-y-3">
+          {attraction.description && (
+            <p className="font-garamond text-sm text-charcoal/70 leading-relaxed">
+              {attraction.description}
+            </p>
+          )}
+          {attraction.tips && (
+            <div className="font-garamond text-sm text-charcoal/65 italic bg-sand rounded-xl px-4 py-3 leading-relaxed">
+              💡 {attraction.tips}
+            </div>
+          )}
+        </div>
+
+        {/* Google Maps button — always at bottom */}
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(attraction.name + ' ' + destination)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full mt-4 bg-white border-2 border-sand hover:border-blue-400 hover:bg-blue-50 text-charcoal font-garamond text-sm font-semibold py-2.5 rounded-xl transition-all duration-300 group"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
+            <circle cx="12" cy="9" r="2.5" fill="white"/>
+          </svg>
+          <span className="group-hover:text-blue-600 transition-colors duration-200">View on Google Maps</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-40 group-hover:opacity-70 group-hover:translate-x-0.5 transition-all duration-200">
+            <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  )
+}
+
+// ── Trip Card with Unsplash Image ─────────────────────────────
+function TripCard({ trip, onViewDetails, onDelete }) {
+  const { imgUrl } = useUnsplashImage(trip.destination)
+
+  return (
+    <div className="bg-sand rounded-3xl overflow-hidden border border-sand hover:border-saffron/40 hover:shadow-lg transition-all duration-300">
+      {/* Card Image */}
+      <div className="relative h-44 bg-charcoal overflow-hidden">
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt={trip.destination}
+            className="w-full h-full object-cover opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-5xl opacity-20">
+            🌏
+          </div>
+        )}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent" />
+
+        {/* Status badge */}
+        <div className={`absolute top-3 right-3 font-garamond text-xs px-3 py-1 rounded-full backdrop-blur-sm
+          ${trip.status === 'saved'
+            ? 'bg-green-500/30 text-green-300 border border-green-400/30'
+            : 'bg-saffron/30 text-saffron border border-saffron/30'
+          }`}
+        >
+          {trip.status === 'saved' ? '✅ Saved' : '📝 Draft'}
+        </div>
+
+        {/* Destination name on image */}
+        <div className="absolute bottom-3 left-5">
+          <h3 className="font-playfair text-xl text-white font-bold capitalize drop-shadow-lg">
+            {trip.destination}
+          </h3>
+          <div className="flex items-center gap-3 font-garamond text-xs text-white/60">
+            <span>📅 {trip.duration} nights</span>
+            <span className="flex items-center gap-1">
+              <FiDollarSign size={12} /> ${trip.budget}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Card Body */}
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <span>
+            {trip.tripStyle === 'budget' ? <FiPackage size={18} /> : trip.tripStyle === 'comfort' ? <FiHome size={18} /> : <FiAward size={18} />}
+          </span>
+          <span className="font-garamond text-sm text-charcoal/60 capitalize">
+            {trip.tripStyle} trip
+          </span>
+        </div>
+
+        {trip.summary && (
+          <p className="font-garamond text-sm text-charcoal/70 leading-relaxed mb-4 line-clamp-2">
+            {trip.summary}
+          </p>
+        )}
+
+        {trip.highlights?.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {trip.highlights.slice(0, 3).map((h, i) => (
+              <span key={i} className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full">
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="font-garamond text-xs text-charcoal/40 mb-5">
+          🕐 {new Date(trip.createdAt).toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric'
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => onViewDetails(trip)}
+            className="flex-1 bg-charcoal text-cream font-garamond text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-saffron hover:text-charcoal transition-all duration-300"
+          >
+            View Full Itinerary
+          </button>
+          <button
+            onClick={() => onDelete(trip._id)}
+            className="px-4 py-3 border border-red-200 text-red-400 font-garamond text-xs rounded-xl hover:bg-red-50 transition-all duration-300"
+            title="Delete trip"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ── Full Trip Detail Modal ────────────────────────────────────
 function TripDetailModal({ trip, onClose }) {
@@ -21,15 +310,15 @@ function TripDetailModal({ trip, onClose }) {
             <FiX size={16} /> Close
           </button>
 
-          {/* Hero */}
-          <div className="bg-charcoal rounded-t-3xl px-8 py-10">
+          {/* Hero with Unsplash background */}
+          <HeroImage query={`${trip.destination} travel landscape`} className="rounded-t-3xl px-8 py-10">
             <div className="font-garamond text-xs uppercase tracking-widest text-saffron mb-2">
               ✦ Saved Itinerary
             </div>
             <h2 className="font-playfair text-4xl text-white font-bold capitalize mb-3">
               {trip.destination}
             </h2>
-            <div className="flex flex-wrap gap-4 font-garamond text-sm text-white/60">
+            <div className="flex flex-wrap gap-4 font-garamond text-sm text-white/70">
               <span>📅 {trip.duration} nights / {trip.duration + 1} days</span>
               <span className="flex items-center gap-1"><FiDollarSign size={14} /> ${trip.budget} budget</span>
               <span className="flex items-center gap-1"><FiUser size={14} /> {trip.travelers || 1} traveler{trip.travelers > 1 ? 's' : ''}</span>
@@ -38,7 +327,7 @@ function TripDetailModal({ trip, onClose }) {
                 {trip.tripStyle}
               </span>
             </div>
-          </div>
+          </HeroImage>
 
           <div className="p-8 space-y-8">
 
@@ -119,77 +408,56 @@ function TripDetailModal({ trip, onClose }) {
                         )}
                       </div>
 
-                      {/* Attractions */}
-                      <div className="p-5 space-y-3">
-                        {day.attractions?.map((a, idx) => (
-                          <div key={idx} className="bg-cream rounded-xl px-5 py-4">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h5 className="font-playfair text-base text-charcoal font-semibold">
-                                  {a.name}
-                                </h5>
-                                <div className="flex items-center gap-2 mt-1">
-                                  {a.timing && (
-                                    <span className="font-garamond text-xs text-charcoal/50">
-                                      🕐 {a.timing}
-                                    </span>
-                                  )}
-                                  {a.category && (
-                                    <span className="font-garamond text-xs text-charcoal/50 bg-sand px-2 py-0.5 rounded-full">
-                                      {a.category}
-                                    </span>
-                                  )}
-                                </div>
-                                {a.description && (
-                                  <p className="font-garamond text-xs text-charcoal/60 mt-1 leading-relaxed">
-                                    {a.description}
-                                  </p>
-                                )}
-                                {a.tips && (
-                                  <p className="font-garamond text-xs text-saffron mt-1 italic">
-                                    💡 {a.tips}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right shrink-0">
-                                <div className="font-playfair text-base text-saffron font-bold">
-                                  {a.entryFee > 0 ? `$${a.entryFee}` : 'Free'}
-                                </div>
-                                {a.entryFeeINR > 0 && (
-                                  <div className="font-garamond text-xs text-charcoal/40">
-                                    ₹{a.entryFeeINR}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                      {/* Attractions — hotel-style grid, equal height */}
+                      <div className="p-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 items-stretch">
+                          {day.attractions?.map((a, idx) => (
+                            <AttractionCard
+                              key={idx}
+                              attraction={a}
+                              destination={trip.destination}
+                            />
+                          ))}
+                        </div>
 
                         {/* Meals */}
                         {day.meals && (
-                          <div className="flex gap-3 flex-wrap mt-2">
-                            {['breakfast', 'lunch', 'dinner'].map((meal) =>
-                              day.meals[meal] ? (
-                                <div key={meal} className="bg-cream rounded-xl px-4 py-2 flex items-center gap-2">
-                                  <span>{meal === 'breakfast' ? '🌅' : meal === 'lunch' ? '☀️' : '🌙'}</span>
-                                  <div>
-                                    <div className="font-garamond text-xs capitalize text-charcoal/50">{meal}</div>
-                                    <div className="font-garamond text-sm text-charcoal">{day.meals[meal].name}</div>
+                          <div className="mb-4">
+                            <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/40 mb-3">🍽 Meals</div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              {['breakfast', 'lunch', 'dinner'].map((meal) =>
+                                day.meals[meal] ? (
+                                  <div key={meal} className="bg-cream rounded-2xl px-5 py-4 flex items-center gap-4">
+                                    <span className="text-2xl shrink-0">
+                                      {meal === 'breakfast' ? '🌅' : meal === 'lunch' ? '☀️' : '🌙'}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/40 mb-0.5 capitalize">{meal}</div>
+                                      <div className="font-playfair text-base text-charcoal font-semibold truncate">{day.meals[meal].name}</div>
+                                    </div>
+                                    <div className="font-playfair text-base text-saffron font-bold shrink-0">
+                                      ${day.meals[meal].cost}
+                                    </div>
                                   </div>
-                                  <div className="font-garamond text-xs text-saffron ml-2">
-                                    ${day.meals[meal].cost}
-                                  </div>
-                                </div>
-                              ) : null
-                            )}
+                                ) : null
+                              )}
+                            </div>
                           </div>
                         )}
 
                         {/* Transport */}
                         {day.transport?.mode && (
-                          <div className="font-garamond text-xs text-charcoal/40 flex items-center gap-2">
-                            🚗 {day.transport.mode}
-                            {day.transport.costINR > 0 && ` · ₹${day.transport.costINR}`}
+                          <div className="bg-cream rounded-2xl px-5 py-4 flex items-center gap-4">
+                            <span className="text-2xl shrink-0">🚗</span>
+                            <div className="flex-1">
+                              <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/40 mb-0.5">Transport</div>
+                              <div className="font-playfair text-base text-charcoal font-semibold">{day.transport.mode}</div>
+                            </div>
+                            {day.transport.costINR > 0 && (
+                              <div className="font-playfair text-base text-charcoal/60 font-semibold shrink-0">
+                                ₹{day.transport.costINR}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -199,7 +467,7 @@ function TripDetailModal({ trip, onClose }) {
               </div>
             )}
 
-            {/* Hotel Options */}
+            {/* Hotel Options — now with images */}
             {trip.hotelOptions?.length > 0 && (
               <div>
                 <h3 className="font-playfair text-2xl text-charcoal font-bold mb-6 flex items-center gap-2">
@@ -207,30 +475,7 @@ function TripDetailModal({ trip, onClose }) {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {trip.hotelOptions.map((h, i) => (
-                    <div key={i} className="bg-sand rounded-2xl p-5">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-playfair text-lg text-charcoal font-bold">{h.name}</h4>
-                        <span className="font-garamond text-sm text-saffron">
-                          {'⭐'.repeat(Math.min(h.stars || 3, 5))}
-                        </span>
-                      </div>
-                      <div className="font-playfair text-2xl text-charcoal font-bold mb-1">
-                        ${h.pricePerNight}
-                        <span className="font-garamond text-sm text-charcoal/50 font-normal">/night</span>
-                      </div>
-                      {h.priceINR && (
-                        <div className="font-garamond text-sm text-charcoal/50 mb-3">
-                          ₹{h.priceINR?.toLocaleString('en-IN')}/night
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-1.5">
-                        {h.amenities?.map((a, ai) => (
-                          <span key={ai} className="bg-cream font-garamond text-xs text-charcoal/60 px-2 py-1 rounded-full">
-                            {a}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                    <HotelCard key={i} hotel={h} destination={trip.destination} />
                   ))}
                 </div>
               </div>
@@ -357,7 +602,6 @@ export default function MyTrips() {
   }
 
   async function handleViewDetails(trip) {
-    // Fetch full trip details from backend
     try {
       const token = await auth.currentUser.getIdToken()
       const response = await fetch(`${BACKEND_URL}/api/trips/${trip._id}`, {
@@ -367,10 +611,10 @@ export default function MyTrips() {
       if (data.success) {
         setSelectedTrip(data.trip)
       } else {
-        setSelectedTrip(trip) // fallback to card data
+        setSelectedTrip(trip)
       }
     } catch {
-      setSelectedTrip(trip) // fallback
+      setSelectedTrip(trip)
     }
   }
 
@@ -460,83 +704,12 @@ export default function MyTrips() {
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {trips.map((trip) => (
-            <div
+            <TripCard
               key={trip._id}
-              className="bg-sand rounded-3xl overflow-hidden border border-sand hover:border-saffron/40 hover:shadow-lg transition-all duration-300"
-            >
-              {/* Card Header */}
-              <div className="bg-charcoal px-6 py-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-playfair text-xl text-white font-bold capitalize mb-1">
-                      {trip.destination}
-                    </h3>
-                    <div className="flex items-center gap-3 font-garamond text-xs text-white/50">
-                      <span>📅 {trip.duration} nights</span>
-                      <span className="flex items-center gap-1"><FiDollarSign size={14} /> ${trip.budget}</span>
-                    </div>
-                  </div>
-                  <div className={`font-garamond text-xs px-3 py-1 rounded-full shrink-0
-                    ${trip.status === 'saved'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-saffron/20 text-saffron'
-                    }`}
-                  >
-                    {trip.status === 'saved' ? '✅ Saved' : '📝 Draft'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span>
-                    {trip.tripStyle === 'budget' ? <FiPackage size={18} /> : trip.tripStyle === 'comfort' ? <FiHome size={18} /> : <FiAward size={18} />}
-                  </span>
-                  <span className="font-garamond text-sm text-charcoal/60 capitalize">
-                    {trip.tripStyle} trip
-                  </span>
-                </div>
-
-                {trip.summary && (
-                  <p className="font-garamond text-sm text-charcoal/70 leading-relaxed mb-4 line-clamp-2">
-                    {trip.summary}
-                  </p>
-                )}
-
-                {trip.highlights?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {trip.highlights.slice(0, 3).map((h, i) => (
-                      <span key={i} className="bg-cream font-garamond text-xs text-charcoal/60 px-3 py-1 rounded-full">
-                        {h}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="font-garamond text-xs text-charcoal/40 mb-5">
-                  🕐 {new Date(trip.createdAt).toLocaleDateString('en-IN', {
-                    day: 'numeric', month: 'short', year: 'numeric'
-                  })}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleViewDetails(trip)}
-                    className="flex-1 bg-charcoal text-cream font-garamond text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-saffron hover:text-charcoal transition-all duration-300"
-                  >
-                    View Full Itinerary
-                  </button>
-                  <button
-                    onClick={() => handleDelete(trip._id)}
-                    className="px-4 py-3 border border-red-200 text-red-400 font-garamond text-xs rounded-xl hover:bg-red-50 transition-all duration-300"
-                    title="Delete trip"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            </div>
+              trip={trip}
+              onViewDetails={handleViewDetails}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       </div>
