@@ -152,7 +152,7 @@ export default function ProfilePanel() {
     setError('')
     try {
       await deleteGuideAccount()
-      navigate('/signup')
+      window.location.replace('/login')
     } catch (err) {
       const message = err.message || 'Could not delete account'
       if (message.toLowerCase().includes('requires-recent-login')) {

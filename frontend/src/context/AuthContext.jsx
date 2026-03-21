@@ -102,6 +102,28 @@ export function AuthProvider({ children }) {
     setUserProfile((prev) => ({ ...(prev || {}), ...patch }))
   }
 
+  async function completeOnboarding(role, name) {
+    if (!currentUser?.uid) {
+      throw new Error('Please login to continue')
+    }
+
+    const profile = {
+      uid: currentUser.uid,
+      email: currentUser.email || '',
+      name: (name || currentUser.displayName || '').trim(),
+      role,
+      createdAt: new Date().toISOString(),
+      certificateStatus: role === 'guide' ? 'pending' : null,
+      walletUSD: role === 'tourist' ? 0 : null,
+      walletINR: role === 'tourist' ? 0 : null,
+      updatedAt: new Date().toISOString(),
+    }
+
+    await setDoc(doc(db, 'users', currentUser.uid), profile, { merge: true })
+    setUserRole(role)
+    setUserProfile((prev) => ({ ...(prev || {}), ...profile }))
+  }
+
   async function deleteGuideAccount() {
     if (!currentUser?.uid) {
       throw new Error('Please login to continue')
@@ -110,6 +132,13 @@ export function AuthProvider({ children }) {
     await deleteGuideAccountData()
     await deleteDoc(doc(db, 'users', currentUser.uid))
     await deleteUser(currentUser)
+
+    // Keep cleanup explicit so UI does not depend on auth listener timing.
+    try {
+      await signOut(auth)
+    } catch {
+      // deleteUser may already invalidate the session; safe to ignore.
+    }
 
     setUserRole(null)
     setUserProfile(null)
@@ -143,6 +172,7 @@ export function AuthProvider({ children }) {
     fetchUserProfile,
     updateUserProfile,
     deleteGuideAccount,
+    completeOnboarding,
   }
 
   return (
