@@ -6,7 +6,7 @@ import Trip from "../models/Trip.model.js";
 // POST /api/guide/availability
 export const toggleAvailability = async (req, res) => {
   try {
-    const { availability, location, rating, price, name } = req.body;
+    const { availability, location, price, name } = req.body;
 
     if (typeof availability !== "boolean") {
       return res.status(400).json({
@@ -31,6 +31,13 @@ export const toggleAvailability = async (req, res) => {
       });
     }
 
+    const fallbackTotalReviews = Number.isFinite(existingGuide?.total_reviews)
+      ? existingGuide.total_reviews
+      : 0;
+    const fallbackAverageRating = fallbackTotalReviews > 0
+      ? Number(existingGuide?.avg_rating ?? existingGuide?.rating ?? 0)
+      : 0;
+
     const guide = await Guide.findOneAndUpdate(
       { user_id: req.user.uid },
       {
@@ -39,7 +46,9 @@ export const toggleAvailability = async (req, res) => {
         full_name: name || req.user.name || existingGuide?.full_name || "",
         availability,
         location: location || "",
-        rating: typeof rating === "number" ? rating : 4.5,
+        rating: fallbackAverageRating,
+        avg_rating: fallbackAverageRating,
+        total_reviews: fallbackTotalReviews,
         price: typeof price === "number" ? price : 1500,
         is_verified: existingGuide?.is_verified || false,
         verification_status: existingGuide?.verification_status || "not_submitted",
@@ -75,12 +84,27 @@ export const getGuides = async (req, res) => {
       query.is_deactivated = { $ne: true };
     }
 
-    const guides = await Guide.find(query).sort({ rating: -1, createdAt: -1 });
+    const guides = await Guide.find(query).sort({ avg_rating: -1, total_reviews: -1, createdAt: -1 });
+
+    const normalizedGuides = guides.map((guideDoc) => {
+      const guide = guideDoc.toObject();
+      const totalReviews = Number.isFinite(guide.total_reviews) ? guide.total_reviews : 0;
+      const avgRating = totalReviews > 0
+        ? Number(guide.avg_rating ?? guide.rating ?? 0)
+        : 0;
+
+      return {
+        ...guide,
+        avg_rating: Number(avgRating.toFixed(2)),
+        total_reviews: totalReviews,
+        rating: Number(avgRating.toFixed(2)),
+      };
+    });
 
     return res.json({
       success: true,
-      count: guides.length,
-      guides,
+      count: normalizedGuides.length,
+      guides: normalizedGuides,
     });
   } catch (error) {
     return res.status(500).json({

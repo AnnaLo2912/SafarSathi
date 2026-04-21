@@ -3,6 +3,7 @@ import { FiCheckCircle, FiClock, FiMapPin, FiToggleLeft, FiToggleRight, FiUpload
 import { useAuth } from '../../context/AuthContext'
 import {
   getBookings,
+  getReviewForBooking,
   getVerificationStatus,
   toggleGuideAvailability,
   uploadCertificateForVerification,
@@ -15,8 +16,27 @@ const badgeByStatus = {
   completed: 'bg-gray-100 text-gray-700',
 }
 
+const STAR_COLOR = '#D96C54'
+
+function RatingStars({ rating = 0 }) {
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`Rating ${rating} out of 5`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className="text-sm leading-none"
+          style={{ color: star <= rating ? STAR_COLOR : '#D1D5DB' }}
+          aria-hidden="true"
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function GuideOverview() {
-  const { userProfile } = useAuth()
+  const { currentUser, userProfile } = useAuth()
   const [available, setAvailable] = useState(false)
   const [verificationStatus, setVerificationStatus] = useState('not_submitted')
   const [isVerified, setIsVerified] = useState(false)
@@ -26,6 +46,10 @@ export default function GuideOverview() {
   const [ocrResult, setOcrResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [bookings, setBookings] = useState([])
+  const [avgRating, setAvgRating] = useState(0)
+  const [totalReviews, setTotalReviews] = useState(0)
+  const [allReviews, setAllReviews] = useState([])
+  const [recentReviews, setRecentReviews] = useState([])
   const [error, setError] = useState('')
   const [verifyError, setVerifyError] = useState('')
 
@@ -37,6 +61,18 @@ export default function GuideOverview() {
     loadBookings()
     loadVerificationState()
   }, [])
+
+  useEffect(() => {
+    const guideUserId = currentUser?.uid || userProfile?.uid
+    if (!guideUserId) return undefined
+
+    loadReviewSummary()
+    const intervalId = window.setInterval(() => {
+      loadReviewSummary()
+    }, 20000)
+
+    return () => window.clearInterval(intervalId)
+  }, [currentUser?.uid, userProfile?.uid])
 
   async function loadBookings() {
     try {
@@ -57,6 +93,54 @@ export default function GuideOverview() {
       setOcrResult(guide.ocr_last_result || null)
     } catch (err) {
       setVerifyError(err.message || 'Could not load verification status')
+    }
+  }
+
+  async function loadReviewSummary() {
+    const guideUserId = currentUser?.uid || userProfile?.uid
+    if (!guideUserId) return
+
+    try {
+      const bookingsData = await getBookings('guide')
+      const completedBookings = (bookingsData.bookings || []).filter(
+        (booking) => booking.status === 'completed'
+      )
+
+      const reviewEntries = await Promise.all(
+        completedBookings.map(async (booking) => {
+          try {
+            const data = await getReviewForBooking(booking._id)
+            if (!data.review) return null
+            return {
+              ...data.review,
+              tourist_name: booking.touristName || 'Tourist',
+              booking_date: booking.date || null,
+              booking_time: booking.time || null,
+            }
+          } catch {
+            return null
+          }
+        })
+      )
+
+      const reviewRows = reviewEntries
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+
+      const derivedTotal = reviewRows.length
+      const derivedAvg = derivedTotal > 0
+        ? reviewRows.reduce((sum, item) => sum + Number(item.rating || 0), 0) / derivedTotal
+        : 0
+
+      setAllReviews(reviewRows)
+      setAvgRating(derivedAvg)
+      setTotalReviews(derivedTotal)
+      setRecentReviews(reviewRows.slice(0, 3))
+    } catch {
+      setAllReviews([])
+      setAvgRating(0)
+      setTotalReviews(0)
+      setRecentReviews([])
     }
   }
 
@@ -134,6 +218,13 @@ export default function GuideOverview() {
 
     return { pending, confirmed, completed }
   }, [bookings])
+
+  const displayTotalReviews = allReviews.length > 0 ? allReviews.length : totalReviews
+  const displayAvgRating = displayTotalReviews > 0
+    ? (allReviews.length > 0
+        ? allReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / allReviews.length
+        : avgRating)
+    : 0
 
   const nextConfirmed = bookings.find((booking) => booking.status === 'confirmed')
 
@@ -243,6 +334,37 @@ export default function GuideOverview() {
           <p className="font-garamond text-sm text-charcoal/60">Completed Trips</p>
           <p className="font-playfair text-3xl text-charcoal font-semibold mt-1">{stats.completed}</p>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm p-5 border border-slate-100">
+        <p className="font-garamond text-sm text-charcoal/60">Tourist Rating</p>
+        <p className="font-playfair text-3xl text-charcoal font-semibold mt-1">
+          {displayTotalReviews > 0 ? `${displayAvgRating.toFixed(1)} ⭐` : '0.0 ⭐'}
+        </p>
+        <p className="font-garamond text-sm text-charcoal/60 mt-1">{displayTotalReviews} reviews</p>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm p-5 border border-slate-100">
+        <h3 className="font-playfair text-xl text-charcoal font-semibold">Recent Tourist Reviews</h3>
+        {recentReviews.length === 0 ? (
+          <p className="font-garamond text-sm text-charcoal/60 mt-2">No reviews yet for completed bookings.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {recentReviews.map((review) => (
+              <div key={review._id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-playfair text-base text-charcoal font-semibold">
+                    {review.tourist_name || 'Tourist'}
+                  </p>
+                  <RatingStars rating={review.rating} />
+                </div>
+                <p className="font-garamond text-sm text-charcoal/70 mt-1 line-clamp-2">
+                  {review.review_text || 'No written review'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">

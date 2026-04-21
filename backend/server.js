@@ -7,6 +7,7 @@ import connectDB from "./config/db.js";
 import tripRoutes from "./routes/trip.routes.js";
 import guideRoutes from "./routes/guide.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
 import verificationRoutes from "./routes/verification.routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/guide", guideRoutes);
 app.use("/api/guides", guideRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api/verification", verificationRoutes);
 
 // ── 404 ───────────────────────────────────────────────────────

@@ -92,6 +92,35 @@ export async function getBookings(role) {
   return handleResponse(response);
 }
 
+export async function createReview(payload) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/reviews`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response);
+}
+
+export async function getGuideReviews(guideId) {
+  const headers = await getAuthHeaders();
+  const query = guideId ? `?guide_id=${encodeURIComponent(guideId)}` : "";
+  const response = await fetch(
+    `${BACKEND_URL}/api/reviews${query}`,
+    { method: "GET", headers }
+  );
+  return handleResponse(response);
+}
+
+export async function getReviewForBooking(bookingId) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/reviews/${bookingId}`, {
+    method: "GET",
+    headers,
+  });
+  return handleResponse(response);
+}
+
 export async function deleteGuideAccountData() {
   const headers = await getAuthHeaders();
   const response = await fetch(`${BACKEND_URL}/api/guide/account`, { method: "DELETE", headers });

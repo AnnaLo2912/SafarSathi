@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import {
   createBookingRequest, getAvailableGuides,
   getBookings, getMyTripsForSharing, cancelBooking,
+  createReview, getReviewForBooking,
 } from '../../services/bookingService'
 
 const statusStyles = {
@@ -15,8 +16,135 @@ const statusStyles = {
 }
 
 const initialForm = { date: '', time: '', duration: '', location: '', notes: '', tripId: '' }
+const STAR_COLOR = '#D96C54'
 
-function BookingCard({ booking, onCancel, onOpenChat }) {
+function RatingStars({ rating = 0, interactive = false, onSelect = null, sizeClass = 'text-lg' }) {
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const filled = star <= rating
+        const color = filled ? STAR_COLOR : '#D1D5DB'
+
+        if (!interactive) {
+          return (
+            <span key={star} className={sizeClass} style={{ color }} aria-hidden="true">
+              ★
+            </span>
+          )
+        }
+
+        return (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onSelect?.(star)}
+            className={`${sizeClass} leading-none transition-transform hover:scale-110`}
+            style={{ color }}
+            aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
+          >
+            ★
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ReviewModal({ booking, onClose, onSubmit, submitting, submitError }) {
+  const [rating, setRating] = useState(0)
+  const [reviewText, setReviewText] = useState('')
+  const [validationError, setValidationError] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+
+    if (!rating) {
+      setValidationError('Rating is required')
+      return
+    }
+
+    setValidationError('')
+    const success = await onSubmit({
+      booking_id: booking._id,
+      rating,
+      review_text: reviewText,
+    })
+
+    if (success) {
+      setSubmitted(true)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6">
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <h3 className="font-playfair text-2xl text-charcoal font-semibold">Rate your experience</h3>
+            <p className="font-garamond text-sm text-charcoal/60 mt-1">
+              {booking.guideName} · {booking.date} at {booking.time}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-charcoal/60 hover:text-charcoal text-xl"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <p className="font-garamond text-sm text-charcoal/70 mb-2">Your rating</p>
+            <RatingStars
+              rating={rating}
+              interactive={true}
+              onSelect={setRating}
+              sizeClass="text-3xl"
+            />
+          </div>
+
+          <label className="block space-y-2">
+            <span className="font-garamond text-sm text-charcoal/70">Share your experience</span>
+            <textarea
+              rows={4}
+              value={reviewText}
+              onChange={(event) => setReviewText(event.target.value)}
+              placeholder="Optional"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 font-garamond text-sm focus:outline-none focus:border-saffron"
+            />
+          </label>
+
+          {validationError && <p className="font-garamond text-sm text-red-600">{validationError}</p>}
+          {submitError && <p className="font-garamond text-sm text-red-600">{submitError}</p>}
+          {submitted && <p className="font-garamond text-sm text-green-700">Review submitted successfully.</p>}
+
+          <div className="pt-2 flex flex-wrap gap-3 justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-slate-200 text-charcoal/70 font-garamond text-sm hover:border-charcoal hover:text-charcoal transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || submitted}
+              className="px-5 py-2 rounded-lg bg-terracotta text-white font-garamond text-sm hover:opacity-90 disabled:opacity-60"
+            >
+              {submitted ? 'Submitted' : submitting ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function BookingCard({ booking, onCancel, onOpenChat, review, onLeaveReview }) {
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed'
 
   return (
@@ -64,6 +192,29 @@ function BookingCard({ booking, onCancel, onOpenChat }) {
         </div>
       )}
 
+      {booking.status === 'completed' && (
+        review ? (
+          <div className="mt-3 rounded-xl border border-slate-200 bg-sand/40 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <RatingStars rating={review.rating} sizeClass="text-base" />
+              <span className="font-garamond text-xs text-charcoal/60">Your review</span>
+            </div>
+            {review.review_text ? (
+              <p className="mt-1 font-garamond text-sm text-charcoal/75 line-clamp-2">{review.review_text}</p>
+            ) : (
+              <p className="mt-1 font-garamond text-sm text-charcoal/50 italic">No written feedback.</p>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => onLeaveReview?.(booking)}
+            className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-garamond text-sm text-charcoal hover:border-terracotta hover:text-terracotta transition-colors"
+          >
+            Leave a Review
+          </button>
+        )
+      )}
+
       {/* Cancel button — only for pending or confirmed */}
       {canCancel && (
         <button
@@ -81,10 +232,14 @@ export default function GuidesPanel({ onOpenChat }) {
   const { userProfile } = useAuth()
   const [guides,        setGuides]       = useState([])
   const [bookings,      setBookings]     = useState([])
+  const [bookingReviews, setBookingReviews] = useState({})
   const [myTrips,       setMyTrips]      = useState([])
   const [loading,       setLoading]      = useState(true)
   const [error,         setError]        = useState('')
   const [selectedGuide, setSelectedGuide]= useState(null)
+  const [reviewBooking, setReviewBooking]= useState(null)
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewError, setReviewError] = useState('')
   const [form,          setForm]         = useState(initialForm)
   const [submitting,    setSubmitting]   = useState(false)
   const [tripDropOpen,  setTripDropOpen] = useState(false)
@@ -99,14 +254,43 @@ export default function GuidesPanel({ onOpenChat }) {
         getBookings('tourist'),
         getMyTripsForSharing().catch(() => ({ trips: [] })),
       ])
-      setGuides(guidesData.guides || [])
-      setBookings(bookingsData.bookings || [])
+      const guidesList = guidesData.guides || []
+      const bookingsList = bookingsData.bookings || []
+
+      setGuides(guidesList)
+      setBookings(bookingsList)
       setMyTrips((tripsData.trips || []).filter(t => t.status === 'saved'))
+      await loadCompletedBookingReviews(bookingsList)
     } catch (err) {
       setError(err.message || 'Unable to load')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function loadCompletedBookingReviews(bookingsList) {
+    const completedBookings = bookingsList.filter((booking) => booking.status === 'completed')
+    if (completedBookings.length === 0) {
+      setBookingReviews({})
+      return
+    }
+
+    const entries = await Promise.all(
+      completedBookings.map(async (booking) => {
+        try {
+          const data = await getReviewForBooking(booking._id)
+          return [booking._id, data.review || null]
+        } catch {
+          return [booking._id, null]
+        }
+      })
+    )
+
+    const reviewMap = {}
+    entries.forEach(([bookingId, review]) => {
+      if (review) reviewMap[bookingId] = review
+    })
+    setBookingReviews(reviewMap)
   }
 
   function openBookingForm(guide) { setSelectedGuide(guide); setForm(initialForm); setTripDropOpen(false) }
@@ -122,6 +306,50 @@ export default function GuidesPanel({ onOpenChat }) {
       await loadData()
     } catch (err) {
       setError(err.message || 'Could not cancel booking')
+    }
+  }
+
+  function openReviewModal(booking) {
+    setReviewError('')
+    setReviewBooking(booking)
+  }
+
+  async function handleReviewSubmit(payload) {
+    try {
+      setReviewSubmitting(true)
+      setReviewError('')
+      const response = await createReview(payload)
+      const review = response.review
+
+      setBookingReviews((prev) => ({
+        ...prev,
+        [payload.booking_id]: review,
+      }))
+
+      return true
+    } catch (err) {
+      const message = err.message || 'Could not submit review'
+
+      // If the review already exists, sync it so the inline booking card updates immediately.
+      if (message.toLowerCase().includes('already exists')) {
+        try {
+          const existing = await getReviewForBooking(payload.booking_id)
+          if (existing?.review) {
+            setBookingReviews((prev) => ({
+              ...prev,
+              [payload.booking_id]: existing.review,
+            }))
+            return true
+          }
+        } catch {
+          // Fall through to show backend error.
+        }
+      }
+
+      setReviewError(message)
+      return false
+    } finally {
+      setReviewSubmitting(false)
     }
   }
 
@@ -174,7 +402,13 @@ export default function GuidesPanel({ onOpenChat }) {
                 <span className="px-3 py-1 rounded-full text-xs uppercase tracking-wide font-garamond bg-green-100 text-green-700">Available</span>
               </div>
               <div className="mt-3 flex items-center gap-4 text-sm font-garamond text-charcoal/75">
-                <p className="inline-flex items-center gap-1"><FiStar size={14} /> {guide.rating?.toFixed(1) || '4.5'}</p>
+                <p className="inline-flex items-center gap-1">
+                  <FiStar size={14} />
+                  {Number(guide.total_reviews || 0) > 0
+                    ? Number(guide.avg_rating ?? guide.rating ?? 0).toFixed(1)
+                    : 'New'}
+                </p>
+                <p className="text-charcoal/55">{Number(guide.total_reviews || 0)} reviews</p>
                 <p>INR {guide.price}/trip</p>
               </div>
               <button onClick={() => openBookingForm(guide)}
@@ -207,6 +441,8 @@ export default function GuidesPanel({ onOpenChat }) {
                         booking={b}
                         onCancel={handleCancel}
                         onOpenChat={onOpenChat}
+                        review={bookingReviews[b._id]}
+                        onLeaveReview={openReviewModal}
                       />
                     ))}
               </div>
@@ -323,6 +559,19 @@ export default function GuidesPanel({ onOpenChat }) {
             </form>
           </div>
         </div>
+      )}
+
+      {reviewBooking && (
+        <ReviewModal
+          booking={reviewBooking}
+          onClose={() => {
+            setReviewBooking(null)
+            setReviewError('')
+          }}
+          onSubmit={handleReviewSubmit}
+          submitting={reviewSubmitting}
+          submitError={reviewError}
+        />
       )}
     </div>
   )

@@ -1,12 +1,31 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FiCheck, FiClock, FiMapPin, FiMessageCircle, FiX, FiMap, FiDollarSign, FiPackage } from 'react-icons/fi'
-import { getBookings, updateBookingStatus } from '../../services/bookingService'
+import { getBookings, getReviewForBooking, updateBookingStatus } from '../../services/bookingService'
 
 const statusBadge = {
   pending:   'bg-amber-100 text-amber-700',
   confirmed: 'bg-green-100 text-green-700',
   rejected:  'bg-red-100 text-red-700',
   completed: 'bg-gray-100 text-gray-700',
+}
+
+const STAR_COLOR = '#D96C54'
+
+function RatingStars({ rating = 0 }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className="text-sm leading-none"
+          style={{ color: star <= rating ? STAR_COLOR : '#D1D5DB' }}
+          aria-hidden="true"
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  )
 }
 
 // ── Itinerary Detail Modal ────────────────────────────────────
@@ -137,6 +156,7 @@ function BookingMeta({ booking }) {
 
 export default function BookingsPanel({ onOpenChat }) {
   const [bookings,      setBookings]      = useState([])
+  const [bookingReviews, setBookingReviews] = useState({})
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState('')
   const [mutatingId,    setMutatingId]    = useState('')
@@ -148,12 +168,39 @@ export default function BookingsPanel({ onOpenChat }) {
     try {
       setLoading(true); setError('')
       const data = await getBookings('guide')
-      setBookings(data.bookings || [])
+      const bookingsList = data.bookings || []
+      setBookings(bookingsList)
+      await loadCompletedBookingReviews(bookingsList)
     } catch (err) {
       setError(err.message || 'Unable to load bookings')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function loadCompletedBookingReviews(bookingsList) {
+    const completed = bookingsList.filter((booking) => booking.status === 'completed')
+    if (completed.length === 0) {
+      setBookingReviews({})
+      return
+    }
+
+    const entries = await Promise.all(
+      completed.map(async (booking) => {
+        try {
+          const data = await getReviewForBooking(booking._id)
+          return [booking._id, data.review || null]
+        } catch {
+          return [booking._id, null]
+        }
+      })
+    )
+
+    const nextMap = {}
+    entries.forEach(([bookingId, review]) => {
+      if (review) nextMap[bookingId] = review
+    })
+    setBookingReviews(nextMap)
   }
 
   async function handleStatusAction(bookingId, action) {
@@ -303,6 +350,24 @@ export default function BookingsPanel({ onOpenChat }) {
                 <div>
                   <p className="font-playfair text-lg text-charcoal">{booking.touristName}</p>
                   <p className="font-garamond text-charcoal/60 text-sm">{booking.date} • {booking.location}</p>
+                  {booking.status === 'completed' && (
+                    <div className="mt-1">
+                      {bookingReviews[booking._id] ? (
+                        <div className="flex items-center gap-2">
+                          <RatingStars rating={bookingReviews[booking._id].rating} />
+                          {bookingReviews[booking._id].review_text ? (
+                            <p className="font-garamond text-xs text-charcoal/55 line-clamp-1">
+                              {bookingReviews[booking._id].review_text}
+                            </p>
+                          ) : (
+                            <p className="font-garamond text-xs text-charcoal/45 italic">No written review</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="font-garamond text-xs text-charcoal/45">No review yet</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   {booking.sharedItinerary?.destination && (

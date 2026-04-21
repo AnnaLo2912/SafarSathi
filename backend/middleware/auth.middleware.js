@@ -45,7 +45,6 @@ export const protect = async (req, res, next) => {
     }
 
     req.user = user
-    console.log('✅ Authenticated:', req.user.uid, req.user.email)
     return next()
 
   } catch (err) {
@@ -74,10 +73,6 @@ export const optionalAuth = async (req, res, next) => {
 
     const user = decodeFirebaseToken(token)
     req.user = user || null
-
-    if (req.user) {
-      console.log('✅ Optional auth:', req.user.uid, req.user.email)
-    }
 
     return next()
   } catch {

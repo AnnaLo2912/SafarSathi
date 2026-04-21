@@ -1,11 +1,30 @@
 import { useEffect, useState } from 'react'
 import { FiMapPin } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
-import { deactivateGuideAccountData, getVerificationStatus } from '../../services/bookingService'
+import { deactivateGuideAccountData, getBookings, getReviewForBooking, getVerificationStatus } from '../../services/bookingService'
 import { useNavigate } from 'react-router-dom'
 
+const STAR_COLOR = '#D96C54'
+
+function RatingStars({ rating = 0 }) {
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`Rating ${rating} out of 5`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className="text-sm leading-none"
+          style={{ color: star <= rating ? STAR_COLOR : '#D1D5DB' }}
+          aria-hidden="true"
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function ProfilePanel() {
-  const { userProfile, updateUserProfile, deleteGuideAccount } = useAuth()
+  const { currentUser, userProfile, updateUserProfile, deleteGuideAccount } = useAuth()
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -14,6 +33,10 @@ export default function ProfilePanel() {
   const [verificationStatus, setVerificationStatus] = useState('not_submitted')
   const [isVerified, setIsVerified] = useState(false)
   const [verifiedAt, setVerifiedAt] = useState(null)
+  const [avgRating, setAvgRating] = useState(0)
+  const [totalReviews, setTotalReviews] = useState(0)
+  const [allReviews, setAllReviews] = useState([])
+  const [recentReviews, setRecentReviews] = useState([])
   const [deleting, setDeleting] = useState(false)
 
   const [form, setForm] = useState({
@@ -61,6 +84,73 @@ export default function ProfilePanel() {
 
     loadVerification()
   }, [])
+
+  useEffect(() => {
+    async function loadReviewStats() {
+      const guideUserId = currentUser?.uid || userProfile?.uid
+      if (!guideUserId) return
+
+      try {
+        const bookingsData = await getBookings('guide')
+        const completedBookings = (bookingsData.bookings || []).filter(
+          (booking) => booking.status === 'completed'
+        )
+
+        const reviewEntries = await Promise.all(
+          completedBookings.map(async (booking) => {
+            try {
+              const data = await getReviewForBooking(booking._id)
+              if (!data.review) return null
+              return {
+                ...data.review,
+                tourist_name: booking.touristName || 'Tourist',
+                booking_date: booking.date || null,
+                booking_time: booking.time || null,
+              }
+            } catch {
+              return null
+            }
+          })
+        )
+
+        const reviewRows = reviewEntries
+          .filter(Boolean)
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+
+        const derivedTotal = reviewRows.length
+        const derivedAvg = derivedTotal > 0
+          ? reviewRows.reduce((sum, item) => sum + Number(item.rating || 0), 0) / derivedTotal
+          : 0
+
+        setAllReviews(reviewRows)
+        setAvgRating(derivedAvg)
+        setTotalReviews(derivedTotal)
+        setRecentReviews(reviewRows.slice(0, 3))
+      } catch {
+        setAllReviews([])
+        setAvgRating(0)
+        setTotalReviews(0)
+        setRecentReviews([])
+      }
+    }
+
+    const guideUserId = currentUser?.uid || userProfile?.uid
+    if (!guideUserId) return undefined
+
+    loadReviewStats()
+    const intervalId = window.setInterval(() => {
+      loadReviewStats()
+    }, 20000)
+
+    return () => window.clearInterval(intervalId)
+  }, [currentUser?.uid, userProfile?.uid])
+
+  const displayTotalReviews = allReviews.length > 0 ? allReviews.length : totalReviews
+  const displayAvgRating = displayTotalReviews > 0
+    ? (allReviews.length > 0
+        ? allReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / allReviews.length
+        : avgRating)
+    : 0
 
   async function handleSave() {
     if (saving) return
@@ -250,11 +340,11 @@ export default function ProfilePanel() {
             {/* Rating */}
             <div className="flex items-center justify-center gap-3 mb-4">
               <p className="font-playfair text-lg text-charcoal font-bold">
-                ⭐ 4.9
+                ⭐ {displayTotalReviews > 0 ? displayAvgRating.toFixed(1) : '0.0'}
               </p>
               <div className="w-px h-4 bg-charcoal/20" />
               <p className="font-garamond text-sm text-charcoal/50">
-                127 reviews
+                {displayTotalReviews} reviews
               </p>
             </div>
 
@@ -505,6 +595,35 @@ export default function ProfilePanel() {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="bg-sand rounded-3xl p-8 mb-6">
+            <h3 className="font-playfair text-xl text-charcoal font-semibold mb-2">
+              Recent Tourist Reviews
+            </h3>
+            <p className="font-garamond text-sm text-charcoal/60 mb-5">
+              Feedback from completed bookings.
+            </p>
+
+            {recentReviews.length === 0 ? (
+              <p className="font-garamond text-sm text-charcoal/60">No reviews yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentReviews.map((review) => (
+                  <div key={review._id} className="bg-cream rounded-2xl border border-sand p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-playfair text-base text-charcoal font-semibold">
+                        {review.tourist_name || 'Tourist'}
+                      </p>
+                      <RatingStars rating={review.rating} />
+                    </div>
+                    <p className="font-garamond text-sm text-charcoal/70 mt-1 line-clamp-2">
+                      {review.review_text || 'No written review'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* LANGUAGES */}

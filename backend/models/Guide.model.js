@@ -54,9 +54,20 @@ const guideSchema = new mongoose.Schema(
     },
     rating: {
       type: Number,
-      default: 4.5,
+      default: 0,
       min: 0,
       max: 5,
+    },
+    avg_rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    total_reviews: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     price: {
       type: Number,
