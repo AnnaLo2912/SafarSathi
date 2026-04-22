@@ -30,7 +30,8 @@
     "pdf-parse": "^1.1.1",
     "razorpay": "^2.9.6",
     "sharp": "^0.34.4",
-    "tesseract.js": "^6.0.1"
+    "tesseract.js": "^6.0.1",
+    "twilio": "^6.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
