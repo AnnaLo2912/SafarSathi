@@ -9,6 +9,7 @@ import guideRoutes from "./routes/guide.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import verificationRoutes from "./routes/verification.routes.js";
+import walletRoutes from "./routes/wallet.routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +56,7 @@ app.use("/api/guide", guideRoutes);
 app.use("/api/guides", guideRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/wallet", walletRoutes);
 app.use("/api/verification", verificationRoutes);
 
 // ── 404 ───────────────────────────────────────────────────────

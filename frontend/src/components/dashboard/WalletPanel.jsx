@@ -1,96 +1,144 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FiSmartphone } from 'react-icons/fi'
+import { getWalletBalance, getTransactions, createRazorpayOrder, verifyTopUp } from '../../services/walletService'
 
 export default function WalletPanel() {
   const [showQR, setShowQR] = useState(false)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpSuccess, setTopUpSuccess] = useState(false)
-
-  const walletData = {
-    usd: 47.5,
-    inr: 3940,
-    transactions: [
-      {
-        id: 1,
-        type: 'credit',
-        title: 'Wallet Top-up',
-        subtitle: 'Razorpay · USD to INR',
-        amount: '+₹8,300',
-        amountUSD: '+$100',
-        date: 'Today, 2:30 PM',
-        icon: '💳',
-        color: 'text-green-600'
-      },
-      {
-        id: 2,
-        type: 'debit',
-        title: 'ITC Rajputana Hotel',
-        subtitle: 'Stripe · 2 nights',
-        amount: '-$95.00',
-        amountUSD: null,
-        date: 'Today, 11:00 AM',
-        icon: '🏨',
-        color: 'text-terracotta'
-      },
-      {
-        id: 3,
-        type: 'debit',
-        title: 'Lassiwala Restaurant',
-        subtitle: 'UPI QR Scan',
-        amount: '-₹250',
-        amountUSD: null,
-        date: 'Yesterday, 1:15 PM',
-        icon: '🍽️',
-        color: 'text-terracotta'
-      },
-      {
-        id: 4,
-        type: 'debit',
-        title: 'Rajesh Kumar — Guide',
-        subtitle: 'Booking · 1 day',
-        amount: '-₹2,000',
-        amountUSD: null,
-        date: 'Yesterday, 9:00 AM',
-        icon: '🧭',
-        color: 'text-terracotta'
-      },
-      {
-        id: 5,
-        type: 'debit',
-        title: 'Amber Fort Entry',
-        subtitle: 'UPI QR Scan',
-        amount: '-₹500',
-        amountUSD: null,
-        date: '2 days ago',
-        icon: '🏯',
-        color: 'text-terracotta'
-      },
-      {
-        id: 6,
-        type: 'credit',
-        title: 'Wallet Top-up',
-        subtitle: 'Razorpay · USD to INR',
-        amount: '+₹4,150',
-        amountUSD: '+$50',
-        date: '3 days ago',
-        icon: '💳',
-        color: 'text-green-600'
-      }
-    ]
-  }
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [usdBalance, setUsdBalance] = useState(0)
+  const [inrBalance, setInrBalance] = useState(0)
+  const [transactions, setTransactions] = useState([])
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const quickAmounts = [25, 50, 100, 200]
+  const conversionRate = 83.2
 
-  function handleTopUpConfirm() {
-    if (!topUpAmount) return
-    setTopUpSuccess(true)
-    setTimeout(() => {
-      setTopUpSuccess(false)
-      setTopUpAmount('')
-    }, 2500)
+  // Fetch wallet balance and transactions on mount
+  useEffect(() => {
+    fetchWalletData()
+  }, [])
+
+  async function fetchWalletData() {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const [balanceData, transactionsData] = await Promise.all([
+        getWalletBalance(),
+        getTransactions()
+      ])
+
+      setUsdBalance(balanceData.usdBalance || 0)
+      setInrBalance(balanceData.inrBalance || 0)
+      setTransactions(transactionsData || [])
+    } catch (err) {
+      console.error('Error fetching wallet data:', err)
+      setError(err.message || 'Failed to load wallet')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const conversionRate = 83.2
+  // Format transaction for display
+  function formatTransaction(txn) {
+    const date = new Date(txn.createdAt)
+    const today = new Date()
+    let dateStr = date.toLocaleDateString('en-IN')
+    
+    if (date.toDateString() === today.toDateString()) {
+      dateStr = `Today, ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+    } else if (date.toDateString() === new Date(today.getTime() - 86400000).toDateString()) {
+      dateStr = `Yesterday, ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+    }
+
+    const isCredit = txn.type === 'credit'
+    const icon = txn.paymentMethod === 'razorpay' ? '💳' : txn.paymentMethod === 'stripe' ? '💳' : '💰'
+    const amount = isCredit ? `+${txn.currency === 'INR' ? '₹' : '$'}${txn.amount}` : `-${txn.currency === 'INR' ? '₹' : '$'}${txn.amount}`
+    
+    return {
+      id: txn._id,
+      icon,
+      title: txn.description || 'Transaction',
+      subtitle: `${txn.paymentMethod.charAt(0).toUpperCase() + txn.paymentMethod.slice(1)}`,
+      amount,
+      date: dateStr,
+      color: isCredit ? 'text-green-600' : 'text-terracotta'
+    }
+  }
+
+  // Handle Razorpay top-up
+  async function handleTopUpConfirm() {
+    if (!topUpAmount || parseFloat(topUpAmount) <= 0) return
+
+    try {
+      setIsProcessing(true)
+      
+      // Step 1: Create Razorpay order
+      const orderData = await createRazorpayOrder(parseFloat(topUpAmount))
+      
+      // Step 2: Load Razorpay checkout script
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
+      
+      script.onload = () => {
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+          order_id: orderData.orderId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'SafarSathi',
+          description: 'Wallet Top-up',
+          handler: async (response) => {
+            // Step 3: Verify payment
+            try {
+              await verifyTopUp({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                amount: parseFloat(topUpAmount)
+              })
+
+              setTopUpSuccess(true)
+              setTopUpAmount('')
+              
+              // Refresh wallet balance
+              await fetchWalletData()
+              
+              setTimeout(() => {
+                setTopUpSuccess(false)
+              }, 3000)
+            } catch (err) {
+              console.error('Payment verification failed:', err)
+              setError('Payment verification failed. Please try again.')
+              setTimeout(() => setError(null), 3000)
+            } finally {
+              setIsProcessing(false)
+            }
+          },
+          prefill: {
+            name: 'Tourist',
+            email: 'tourist@safarsathi.com'
+          },
+          theme: {
+            color: '#E8892B'
+          }
+        }
+
+        const rzp = new window.Razorpay(options)
+        rzp.open()
+      }
+
+      document.body.appendChild(script)
+    } catch (err) {
+      console.error('Error creating order:', err)
+      setError(err.message || 'Failed to create payment order')
+      setIsProcessing(false)
+      setTimeout(() => setError(null), 3000)
+    }
+  }
 
   return (
     <div className="page-fade-in">
@@ -118,7 +166,7 @@ export default function WalletPanel() {
               USD Balance
             </div>
             <div className="font-playfair text-5xl text-charcoal font-bold mb-1">
-              ${walletData.usd.toFixed(2)}
+              ${usdBalance.toFixed(2)}
             </div>
             <div className="font-garamond text-sm text-charcoal/60">
               Available for hotel payments
@@ -145,7 +193,7 @@ export default function WalletPanel() {
               INR Balance
             </div>
             <div className="font-playfair text-5xl text-charcoal font-bold mb-1">
-              ₹{walletData.inr.toLocaleString('en-IN')}
+              ₹{inrBalance.toLocaleString('en-IN')}
             </div>
             <div className="font-garamond text-sm text-charcoal/60">
               For local payments & guides
@@ -320,6 +368,11 @@ export default function WalletPanel() {
         </div>
 
         {/* Top-up Button */}
+        {error && (
+          <div className="w-full bg-red-100 text-red-700 font-garamond text-sm px-4 py-3 rounded-2xl mb-4">
+            {error}
+          </div>
+        )}
         {topUpSuccess ? (
           <button className="w-full bg-green-500 text-white cursor-default font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl text-center">
             ✓ Top-up Successful!
@@ -327,10 +380,12 @@ export default function WalletPanel() {
         ) : (
           <button
             onClick={handleTopUpConfirm}
-            disabled={!topUpAmount}
+            disabled={!topUpAmount || isProcessing}
             className="w-full bg-charcoal text-cream font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl hover:bg-saffron hover:text-charcoal transition-all duration-300 text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {topUpAmount
+            {isProcessing
+              ? 'Processing...'
+              : topUpAmount
               ? `Add $${topUpAmount} → ₹${(parseFloat(topUpAmount) * conversionRate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
               : 'Select an amount'}
           </button>
@@ -350,47 +405,55 @@ export default function WalletPanel() {
         </div>
 
         {/* Transactions List */}
-        <div className="space-y-2">
-          {walletData.transactions.map((transaction) => (
-            <div
-              key={transaction.id}
-              className="flex items-center gap-4 bg-cream rounded-2xl px-5 py-4 border border-sand hover:border-saffron/30 transition-all duration-200"
-            >
-              {/* Icon */}
-              <div className="w-10 h-10 rounded-full bg-sand flex items-center justify-center text-lg shrink-0">
-                {transaction.icon}
-              </div>
-
-              {/* Center Content */}
-              <div className="flex-1">
-                <div className="font-playfair text-sm text-charcoal font-semibold">
-                  {transaction.title}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="font-garamond text-xs text-charcoal/50">
-                    {transaction.subtitle}
-                  </span>
-                  <span className="font-garamond text-xs text-charcoal/40">·</span>
-                  <span className="font-garamond text-xs text-charcoal/40">
-                    {transaction.date}
-                  </span>
-                </div>
-              </div>
-
-              {/* Amount */}
-              <div className="text-right">
-                <div className={`font-playfair text-base font-bold ${transaction.color}`}>
-                  {transaction.amount}
-                </div>
-                {transaction.amountUSD && (
-                  <div className="font-garamond text-xs text-charcoal/40 mt-0.5">
-                    {transaction.amountUSD}
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="font-garamond text-charcoal/60">Loading transactions...</p>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="font-garamond text-charcoal/60">No transactions yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {transactions.map((txn) => {
+              const formatted = formatTransaction(txn)
+              return (
+                <div
+                  key={formatted.id}
+                  className="flex items-center gap-4 bg-cream rounded-2xl px-5 py-4 border border-sand hover:border-saffron/30 transition-all duration-200"
+                >
+                  {/* Icon */}
+                  <div className="w-10 h-10 rounded-full bg-sand flex items-center justify-center text-lg shrink-0">
+                    {formatted.icon}
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+
+                  {/* Center Content */}
+                  <div className="flex-1">
+                    <div className="font-playfair text-sm text-charcoal font-semibold">
+                      {formatted.title}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="font-garamond text-xs text-charcoal/50">
+                        {formatted.subtitle}
+                      </span>
+                      <span className="font-garamond text-xs text-charcoal/40">·</span>
+                      <span className="font-garamond text-xs text-charcoal/40">
+                        {formatted.date}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="text-right">
+                    <div className={`font-playfair text-base font-bold ${formatted.color}`}>
+                      {formatted.amount}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
