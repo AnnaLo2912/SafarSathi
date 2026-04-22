@@ -80,6 +80,19 @@ export const optionalAuth = async (req, res, next) => {
     return next()
   }
 }
+// export const optionalAuth = async (req, res, next) => {
+//   try {
+//     const authHeader = req.headers.authorization;
+//     if (!authHeader?.startsWith("Bearer ")) return next();
+//     const token   = authHeader.split(" ")[1];
+//     const admin   = (await import("../config/firebase.admin.js")).default;
+//     const decoded = await admin.auth().verifyIdToken(token);
+//     req.user = decoded;
+//     next();
+//   } catch {
+//     next();
+//   }
+// };
   
   
   

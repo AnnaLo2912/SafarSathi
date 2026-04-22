@@ -36,11 +36,9 @@ const hotelOptionSchema = new mongoose.Schema({
 }, { _id: false });
 
 const tripSchema = new mongoose.Schema({
-  // Firebase user info
   firebaseUid: { type: String, default: null },
   userEmail:   { type: String, default: null },
 
-  // Core trip info
   destination: { type: String, required: true },
   duration:    { type: Number, required: true },
   budget:      { type: Number, required: true },
@@ -52,7 +50,17 @@ const tripSchema = new mongoose.Schema({
   },
   startDate: { type: Date },
 
-  // AI generated content
+  // Currency info
+  currency:     { type: String, default: "USD" },
+  exchangeRate: { type: Number, default: 83 },
+
+  // Coordinates for weather
+  lat: { type: Number, default: null },
+  lon: { type: Number, default: null },
+
+  // Custom vs AI generated
+  isCustom: { type: Boolean, default: false },
+
   summary:    String,
   highlights: [String],
   dayPlans:   [dayPlanSchema],
@@ -68,7 +76,6 @@ const tripSchema = new mongoose.Schema({
   packingList: [String],
   travelTips:  [String],
 
-  // Images
   galleryImages: [{
     url:          String,
     thumbUrl:     String,
@@ -76,12 +83,12 @@ const tripSchema = new mongoose.Schema({
     photographer: String,
   }],
 
-  // Weather from Open-Meteo
   weather: [{
-    date:      Date,
+    date:      { type: mongoose.Schema.Types.Mixed },
     tempMax:   Number,
     tempMin:   Number,
     condition: String,
+    type:      { type: String, default: 'forecast' },
   }],
 
   status: {
@@ -91,13 +98,7 @@ const tripSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-// Fast lookup by user
 tripSchema.index({ firebaseUid: 1, createdAt: -1 });
 
 const Trip = mongoose.model("Trip", tripSchema);
 export default Trip;
-
-
-
-
-
