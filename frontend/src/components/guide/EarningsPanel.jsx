@@ -1,130 +1,174 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { FiDollarSign } from 'react-icons/fi'
+import { getBookings } from '../../services/bookingService'
 
-const earningsData = {
-  week: {
-    total: "₹6,000",
-    trips: 3,
-    avgPerTrip: "₹2,000",
-    growth: "+12%",
-    bars: [
-      { day: "Mon", amount: 0, height: 0 },
-      { day: "Tue", amount: 2000, height: 60 },
-      { day: "Wed", amount: 0, height: 0 },
-      { day: "Thu", amount: 2000, height: 60 },
-      { day: "Fri", amount: 0, height: 0 },
-      { day: "Sat", amount: 2000, height: 60 },
-      { day: "Sun", amount: 0, height: 0 },
-    ]
-  },
-  month: {
-    total: "₹24,500",
-    trips: 13,
-    avgPerTrip: "₹1,885",
-    growth: "+8%",
-    bars: [
-      { day: "W1", amount: 6000, height: 50 },
-      { day: "W2", amount: 8500, height: 70 },
-      { day: "W3", amount: 4000, height: 33 },
-      { day: "W4", amount: 6000, height: 50 },
-    ]
-  },
-  year: {
-    total: "₹2,18,000",
-    trips: 109,
-    avgPerTrip: "₹2,000",
-    growth: "+23%",
-    bars: [
-      { day: "Apr", amount: 18000, height: 55 },
-      { day: "May", amount: 22000, height: 67 },
-      { day: "Jun", amount: 15000, height: 46 },
-      { day: "Jul", amount: 12000, height: 37 },
-      { day: "Aug", amount: 19000, height: 58 },
-      { day: "Sep", amount: 24000, height: 73 },
-      { day: "Oct", amount: 28000, height: 85 },
-      { day: "Nov", amount: 26000, height: 79 },
-      { day: "Dec", amount: 20000, height: 61 },
-      { day: "Jan", amount: 16000, height: 49 },
-      { day: "Feb", amount: 18000, height: 55 },
-      { day: "Mar", amount: 20000, height: 61 },
-    ]
-  }
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(amount);
 }
 
-const transactions = [
-  {
-    id: 1,
-    tourist: "Sarah Mitchell",
-    country: "🇺🇸",
-    avatar: "S",
-    avatarBg: "bg-saffron",
-    service: "Full Day Tour — Amber Fort",
-    date: "Today, Mar 19",
-    amount: "₹2,000",
-    status: "paid",
-    method: "Razorpay"
-  },
-  {
-    id: 2,
-    tourist: "James Whitfield",
-    country: "🇬🇧",
-    avatar: "J",
-    avatarBg: "bg-deepblue",
-    service: "Half Day — City Palace",
-    date: "Mar 17",
-    amount: "₹1,200",
-    status: "paid",
-    method: "Stripe"
-  },
-  {
-    id: 3,
-    tourist: "Yuki Tanaka",
-    country: "🇯🇵",
-    avatar: "Y",
-    avatarBg: "bg-terracotta",
-    service: "Full Day — Nahargarh Fort",
-    date: "Mar 15",
-    amount: "₹2,000",
-    status: "paid",
-    method: "UPI"
-  },
-  {
-    id: 4,
-    tourist: "Emma Richter",
-    country: "🇩🇪",
-    avatar: "E",
-    avatarBg: "bg-green-600",
-    service: "Full Day — Heritage Walk",
-    date: "Mar 12",
-    amount: "₹2,000",
-    status: "paid",
-    method: "Razorpay"
-  },
-  {
-    id: 5,
-    tourist: "Carlos Mendez",
-    country: "🇧🇷",
-    avatar: "C",
-    avatarBg: "bg-deepblue",
-    service: "2 Day Package — Jaipur",
-    date: "Mar 10",
-    amount: "₹4,000",
-    status: "paid",
-    method: "Stripe"
+const formatShortCurrency = (amount) => {
+  if (amount >= 1000) {
+    return `₹${(amount / 1000).toFixed(1).replace(/\.0$/, '')}K`;
   }
-]
-
-const payoutInfo = {
-  pending: "₹6,000",
-  nextPayout: "Mar 22, 2026",
-  bank: "SBI ••••4521",
-  totalEarned: "₹2,18,000",
-  totalTrips: 109
+  return `₹${Math.round(amount)}`;
 }
 
 export default function EarningsPanel() {
   const [period, setPeriod] = useState('week')
-  const data = earningsData[period]
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchBookings() {
+      try {
+        const data = await getBookings('guide')
+        setBookings(data.bookings || [])
+      } catch (err) {
+        console.error("Failed to load bookings", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchBookings()
+  }, [])
+
+  const dynamicData = useMemo(() => {
+    const now = new Date()
+    const oneDay = 24 * 60 * 60 * 1000
+    const completed = bookings.filter(b => b.status === 'completed')
+
+    // Filter bookings
+    const weekBookings = completed.filter(b => (now - new Date(b.updatedAt || b.date)) <= 7 * oneDay)
+    const monthBookings = completed.filter(b => (now - new Date(b.updatedAt || b.date)) <= 30 * oneDay)
+    const yearBookings = completed.filter(b => (now - new Date(b.updatedAt || b.date)) <= 365 * oneDay)
+
+    const totalEarned = completed.reduce((sum, b) => sum + (b.price || 0), 0)
+    const totalTrips = completed.length
+
+    const generateStats = (filtered) => {
+      const total = filtered.reduce((sum, b) => sum + (b.price || 0), 0)
+      const trips = filtered.length
+      const avg = trips > 0 ? total / trips : 0
+      return { total, trips, avg }
+    }
+
+    const weekStats = generateStats(weekBookings)
+    const monthStats = generateStats(monthBookings)
+    const yearStats = generateStats(yearBookings)
+
+    // WEEK BARS
+    const weekBarsMap = { "Mon": 0, "Tue": 0, "Wed": 0, "Thu": 0, "Fri": 0, "Sat": 0, "Sun": 0 }
+    weekBookings.forEach(b => {
+      const d = new Date(b.updatedAt || b.date)
+      if(!isNaN(d)) {
+        const dayStr = d.toLocaleDateString('en-US', { weekday: 'short' })
+        if(weekBarsMap[dayStr] !== undefined) weekBarsMap[dayStr] += (b.price || 0)
+      }
+    })
+    const weekBars = Object.keys(weekBarsMap).map(day => ({ day, amount: weekBarsMap[day], height: 0 }))
+
+    // MONTH BARS
+    const monthBars = [
+      { day: "W1", amount: 0, height: 0 },
+      { day: "W2", amount: 0, height: 0 },
+      { day: "W3", amount: 0, height: 0 },
+      { day: "W4", amount: 0, height: 0 },
+    ]
+    monthBookings.forEach(b => {
+      const d = new Date(b.updatedAt || b.date)
+      if(!isNaN(d)) {
+        const daysAgo = Math.floor((now - d) / oneDay)
+        const weekIdx = Math.min(3, Math.floor(daysAgo / 7))
+        monthBars[3 - weekIdx].amount += (b.price || 0)
+      }
+    })
+
+    // YEAR BARS
+    const yearBarsMap = {}
+    for(let i=11; i>=0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      yearBarsMap[d.toLocaleDateString('en-US', { month: 'short' })] = 0
+    }
+    yearBookings.forEach(b => {
+      const d = new Date(b.updatedAt || b.date)
+      if(!isNaN(d)) {
+        const mStr = d.toLocaleDateString('en-US', { month: 'short' })
+        if(yearBarsMap[mStr] !== undefined) yearBarsMap[mStr] += (b.price || 0)
+      }
+    })
+    const yearBars = Object.keys(yearBarsMap).map(day => ({ day, amount: yearBarsMap[day], height: 0 }))
+
+    // TXNS
+    const txns = [...completed]
+      .sort((a,b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date))
+      .slice(0, 5).map(b => ({
+        id: b._id,
+        tourist: b.touristName,
+        country: "🌍",
+        avatar: b.touristName?.[0] || 'U',
+        avatarBg: 'bg-deepblue',
+        service: b.location,
+        date: new Date(b.updatedAt || b.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+        amount: formatCurrency(b.price || 0),
+        status: 'paid',
+        method: 'Wallet'
+      }))
+
+    const maxWeek = Math.max(...weekBars.map(b => b.amount), 3000)
+    const maxMonth = Math.max(...monthBars.map(b => b.amount), 3000)
+    const maxYear = Math.max(...yearBars.map(b => b.amount), 3000)
+
+    weekBars.forEach(b => { b.height = maxWeek > 0 ? (b.amount / maxWeek) * 100 : 0 })
+    monthBars.forEach(b => { b.height = maxMonth > 0 ? (b.amount / maxMonth) * 100 : 0 })
+    yearBars.forEach(b => { b.height = maxYear > 0 ? (b.amount / maxYear) * 100 : 0 })
+
+    return {
+      week: {
+        total: formatCurrency(weekStats.total),
+        trips: weekStats.trips,
+        avgPerTrip: formatCurrency(weekStats.avg),
+        growth: "+0%",
+        bars: weekBars,
+        maxAmount: maxWeek
+      },
+      month: {
+        total: formatCurrency(monthStats.total),
+        trips: monthStats.trips,
+        avgPerTrip: formatCurrency(monthStats.avg),
+        growth: "+0%",
+        bars: monthBars,
+        maxAmount: maxMonth
+      },
+      year: {
+        total: formatCurrency(yearStats.total),
+        trips: yearStats.trips,
+        avgPerTrip: formatCurrency(yearStats.avg),
+        growth: "+0%",
+        bars: yearBars,
+        maxAmount: maxYear
+      },
+      transactions: txns,
+      payoutInfo: {
+        pending: formatCurrency(0),
+        nextPayout: "End of month",
+        bank: "Saved Bank Acc.",
+        totalEarned: formatCurrency(totalEarned),
+        totalTrips: totalTrips
+      }
+    }
+  }, [bookings])
+
+  const data = dynamicData[period]
+  const payoutInfo = dynamicData.payoutInfo
+  const transactions = dynamicData.transactions
+
+  if (loading) {
+    return <div className="page-fade-in p-8 text-charcoal/60 font-garamond">Loading earnings data...</div>
+  }
 
   return (
     <div className="page-fade-in">
@@ -235,9 +279,9 @@ export default function EarningsPanel() {
           <div className="relative h-48 mb-4">
             {/* Y-axis Labels */}
             <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between pr-2 font-garamond text-xs text-charcoal/30">
-              <span>₹3K</span>
-              <span>₹2K</span>
-              <span>₹1K</span>
+              <span>{formatShortCurrency(data.maxAmount)}</span>
+              <span>{formatShortCurrency(data.maxAmount * 0.66)}</span>
+              <span>{formatShortCurrency(data.maxAmount * 0.33)}</span>
               <span>₹0</span>
             </div>
 

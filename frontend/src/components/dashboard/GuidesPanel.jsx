@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import {
   createBookingRequest, getAvailableGuides,
   getBookings, getMyTripsForSharing, cancelBooking,
-  createReview, getReviewForBooking,
+  createReview, getReviewForBooking, payForBooking
 } from '../../services/bookingService'
 
 const statusStyles = {
@@ -144,7 +144,7 @@ function ReviewModal({ booking, onClose, onSubmit, submitting, submitError }) {
   )
 }
 
-function BookingCard({ booking, onCancel, onOpenChat, review, onLeaveReview }) {
+function BookingCard({ booking, onCancel, onOpenChat, review, onLeaveReview, onPay }) {
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed'
 
   return (
@@ -193,7 +193,14 @@ function BookingCard({ booking, onCancel, onOpenChat, review, onLeaveReview }) {
       )}
 
       {booking.status === 'completed' && (
-        review ? (
+        booking.paymentStatus !== 'paid' ? (
+          <button
+            onClick={() => onPay?.(booking)}
+            className="mt-3 w-full rounded-xl bg-terracotta px-3 py-2 font-garamond text-sm text-white hover:opacity-90 transition-opacity"
+          >
+            Pay Guide Daily Rate (INR {booking.price})
+          </button>
+        ) : review ? (
           <div className="mt-3 rounded-xl border border-slate-200 bg-sand/40 px-3 py-2">
             <div className="flex items-center gap-2">
               <RatingStars rating={review.rating} sizeClass="text-base" />
@@ -309,6 +316,21 @@ export default function GuidesPanel({ onOpenChat }) {
     }
   }
 
+  async function handlePayGuide(booking) {
+    if (!window.confirm(`Pay INR ${booking.price} from your wallet to ${booking.guideName}?`)) return
+    try {
+      setError('')
+      setLoading(true)
+      await payForBooking(booking._id)
+      await loadData()
+      alert('Payment successful! You can now leave a review.')
+    } catch (err) {
+      setError(err.message || 'Payment failed. Please check your wallet balance.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function openReviewModal(booking) {
     setReviewError('')
     setReviewBooking(booking)
@@ -409,7 +431,7 @@ export default function GuidesPanel({ onOpenChat }) {
                     : 'New'}
                 </p>
                 <p className="text-charcoal/55">{Number(guide.total_reviews || 0)} reviews</p>
-                <p>INR {guide.price}/trip</p>
+                <p>INR {guide.price}/day</p>
               </div>
               <button onClick={() => openBookingForm(guide)}
                 className="mt-4 px-4 py-2 rounded-lg bg-terracotta text-white hover:opacity-90 font-garamond text-sm">
@@ -443,6 +465,7 @@ export default function GuidesPanel({ onOpenChat }) {
                         onOpenChat={onOpenChat}
                         review={bookingReviews[b._id]}
                         onLeaveReview={openReviewModal}
+                        onPay={handlePayGuide}
                       />
                     ))}
               </div>

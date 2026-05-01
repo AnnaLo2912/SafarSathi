@@ -86,6 +86,15 @@ export async function updateBookingStatus(bookingId, action) {
   return handleResponse(response);
 }
 
+export async function payForBooking(bookingId) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${BACKEND_URL}/api/bookings/${bookingId}/pay`, {
+    method: "POST",
+    headers,
+  });
+  return handleResponse(response);
+}
+
 export async function getBookings(role) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${BACKEND_URL}/api/bookings?role=${role}`, { method: "GET", headers });

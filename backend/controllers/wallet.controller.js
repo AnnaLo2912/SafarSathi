@@ -15,7 +15,10 @@ export async function getWalletBalance(req, res) {
     let wallet = await Wallet.findOne({ userId });
 
     if (!wallet) {
-      wallet = new Wallet({ userId });
+      wallet = new Wallet({ userId, inrBalance: 2000 });
+      await wallet.save();
+    } else if (wallet.inrBalance === 0) {
+      wallet.inrBalance = 2000;
       await wallet.save();
     }
 

@@ -5,6 +5,7 @@ import {
   getBookings,
   updateBookingStatus,
   cancelBooking,
+  payForBooking,
 } from "../controllers/booking.controller.js";
 
 const router = express.Router();
@@ -13,5 +14,6 @@ router.post("/",              protect, createBooking);
 router.get("/",               protect, getBookings);
 router.patch("/:id",          protect, updateBookingStatus);
 router.patch("/:id/cancel",   protect, cancelBooking);   // tourist cancel
+router.post("/:id/pay",       protect, payForBooking);
 
 export default router;

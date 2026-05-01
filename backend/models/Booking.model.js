@@ -18,6 +18,11 @@ const bookingSchema = new mongoose.Schema(
       default: "pending",
       index: true,
     },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid"],
+      default: "pending",
+    },
 
     // ── Itinerary sharing ─────────────────────────────────────
     sharedItinerary: {

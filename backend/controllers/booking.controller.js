@@ -1,6 +1,8 @@
 import Booking from "../models/Booking.model.js";
 import Guide   from "../models/Guide.model.js";
 import Trip    from "../models/Trip.model.js";
+import Wallet  from "../models/Wallet.model.js";
+import Transaction from "../models/Transaction.model.js";
 
 const actionToStatus = {
   accept:   "confirmed",
@@ -152,6 +154,53 @@ export const getBookings = async (req, res) => {
     const bookings = await Booking.find(query).sort({ createdAt: -1 });
 
     return res.json({ success: true, count: bookings.length, bookings });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// POST /api/bookings/:id/pay
+export const payForBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.tourist_id !== req.user.uid) return res.status(403).json({ success: false, message: "Only the tourist can pay for this booking" });
+    if (booking.status !== "completed") return res.status(400).json({ success: false, message: "Booking must be completed by the guide before payment" });
+    if (booking.paymentStatus === "paid") return res.status(400).json({ success: false, message: "Booking is already paid" });
+
+    // Tourist wallet
+    let touristWallet = await Wallet.findOne({ userId: req.user.uid });
+    if (!touristWallet) {
+      touristWallet = new Wallet({ userId: req.user.uid, inrBalance: 2000 });
+    } else if (touristWallet.inrBalance === 0) {
+      touristWallet.inrBalance = 2000; // Provide default balance for testing as requested
+    }
+
+    if (touristWallet.inrBalance < booking.price) {
+      return res.status(400).json({ success: false, message: "Insufficient wallet balance" });
+    }
+
+    // Guide wallet
+    let guideWallet = await Wallet.findOne({ userId: booking.guide_id });
+    if (!guideWallet) guideWallet = new Wallet({ userId: booking.guide_id });
+
+    // Deduct and add
+    touristWallet.inrBalance -= booking.price;
+    guideWallet.inrBalance += booking.price;
+    await touristWallet.save();
+    await guideWallet.save();
+
+    // Update booking
+    booking.paymentStatus = "paid";
+    await booking.save();
+
+    // Record transactions
+    await Transaction.create([
+      { transactionId: `txn_t_${Date.now()}`, userId: req.user.uid, type: "debit", currency: "INR", amount: booking.price, paymentMethod: "wallet", status: "completed", description: `Payment for booking with ${booking.guideName}` },
+      { transactionId: `txn_g_${Date.now()}`, userId: booking.guide_id, type: "credit", currency: "INR", amount: booking.price, paymentMethod: "wallet", status: "completed", description: `Earnings from booking with ${booking.touristName}` }
+    ]);
+
+    return res.json({ success: true, message: "Payment successful", booking });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
