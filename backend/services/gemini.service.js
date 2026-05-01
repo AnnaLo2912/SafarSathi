@@ -52,7 +52,7 @@ const fetchClimateAverages = async (lat, lon, startDate, duration) => {
     const histEnd   = new Date(end);   histEnd.setFullYear(histEnd.getFullYear() - 1);
 
     const fmt = (d) => d.toISOString().split('T')[0];
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&start_date=${fmt(histStart)}&end_date=${fmt(histEnd)}`;
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&start_date=${fmt(histStart)}&end_date=${fmt(histEnd)}`;
 
     const response = await axios.get(url);
     const daily    = response.data.daily;
@@ -133,11 +133,11 @@ export const generateItinerary = async (data) => {
 
   const prompt = `
 You are an expert travel planner for SafarSathi. Generate a high-detail trip itinerary for ${data.destination}.
-Duration: ${data.duration} nights. Budget: $${data.budget} USD. Travelers: ${data.travelers || 1}. Style: ${data.tripStyle || 'budget'}.
+Duration: ${data.duration} nights. Budget: ${data.budget} ${data.currency}. Travelers: ${data.travelers || 1}. Style: ${data.tripStyle || 'budget'}.
 ${dateContext}
 
 CRITICAL DATABASE MAPPING RULES:
-1. For all costs provide values in BOTH USD and INR. Rate: 1 USD = 83 INR.
+1. For all costs provide values in BOTH ${data.currency} (base fields like "cost", "entryFee", "pricePerNight") and INR ("costINR", "entryFeeINR", "priceINR"). Rate: 1 ${data.currency} = ${data.exchangeRate} INR.
 2. Ensure NO empty arrays. Every day must have 3 attractions.
 3. Provide 3 real hotels for "hotelOptions".
 4. Include accurate "lat" and "lon" coordinates for ${data.destination}.

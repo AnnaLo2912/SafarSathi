@@ -27,6 +27,8 @@ export const generateTrip = async (req, res) => {
       travelers: parseInt(travelers) || 1,
       tripStyle: tripStyle || "budget",
       startDate: parsedStartDate,
+      currency:  currency || "USD",
+      exchangeRate: parseFloat(exchangeRate) || 83,
     });
 
     const tripData = {

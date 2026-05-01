@@ -89,9 +89,9 @@ function DayCard({ day, destination, currencySymbol, exchangeRate }) {
           <div className="text-right">
             <div className="font-garamond text-xs text-white/60">Est. cost</div>
             <div className="font-playfair text-lg text-white font-bold">
-              {currencySymbol}{(day.dayTotal / (exchangeRate || 83)).toFixed(0)}
+              {currencySymbol}{day.dayTotal}
             </div>
-            <div className="font-garamond text-xs text-white/50">₹{day.dayTotal}</div>
+            <div className="font-garamond text-xs text-white/50">₹{Math.round(day.dayTotal * (currencySymbol === '₹' ? 1 : exchangeRate))}</div>
           </div>
         )}
       </div>
@@ -628,7 +628,7 @@ export default function TripPlanner() {
         body: JSON.stringify({
           destination: query,
           duration:    parseInt(nights),
-          budget:      budgetINR, // always send INR to backend
+          budget:      parseFloat(budget), // send the exact value the user entered
           travelers:   parseInt(travelers),
           tripStyle,
           startDate:   startDate || undefined,
@@ -680,7 +680,7 @@ export default function TripPlanner() {
               name:     a.name,
               type:     a.category || 'Sightseeing',
               // Store USD cost; display logic in ActivityRow handles currency
-              cost:     (!a.entryFee || a.entryFee === 0) ? 'Free' : `$${a.entryFee}`,
+              cost:     (!a.entryFee || a.entryFee === 0) ? 'Free' : `${selectedCurrency.symbol}${a.entryFee}`,
               costINR:  (!a.entryFeeINR || a.entryFeeINR === 0) ? 'Free' : `₹${a.entryFeeINR}`,
               duration: '1-2 hrs',
               tip:      a.tips || '',
@@ -694,8 +694,8 @@ export default function TripPlanner() {
         hotels: (trip.hotelOptions || []).map((h, i) => ({
           name:       h.name,
           stars:      h.stars || 3,
-          price:      `${selectedCurrency.symbol}${(h.pricePerNight / exchangeRate * (currency === 'INR' ? 83 : 1)).toFixed(0)}`,
-          priceINR:   h.priceINR ? `₹${h.priceINR.toLocaleString('en-IN')}` : null,
+          price:      `${selectedCurrency.symbol}${h.pricePerNight}`,
+          priceINR:   h.priceINR ? `₹${h.priceINR.toLocaleString('en-IN')}` : `₹${Math.round(h.pricePerNight * (currency === 'INR' ? 1 : exchangeRate)).toLocaleString('en-IN')}`,
           location:   trip.destination,
           perks:      h.amenities || [],
           badge:      i === 0 ? 'Best Value' : i === 1 ? 'Luxury Pick' : 'Budget Pick',
@@ -703,10 +703,10 @@ export default function TripPlanner() {
         })),
 
         budgetBreakdown: trip.budgetBreakdown ? [
-          { category: 'Accommodation', amount: `₹${trip.budgetBreakdown.accommodation}`, amountCurr: `${selectedCurrency.symbol}${(trip.budgetBreakdown.accommodation / exchangeRate).toFixed(0)}`, percentage: Math.round((trip.budgetBreakdown.accommodation / trip.budgetBreakdown.total) * 100), color: 'bg-saffron'    },
-          { category: 'Food & Drinks', amount: `₹${trip.budgetBreakdown.food}`,          amountCurr: `${selectedCurrency.symbol}${(trip.budgetBreakdown.food          / exchangeRate).toFixed(0)}`, percentage: Math.round((trip.budgetBreakdown.food          / trip.budgetBreakdown.total) * 100), color: 'bg-terracotta' },
-          { category: 'Transport',     amount: `₹${trip.budgetBreakdown.transport}`,     amountCurr: `${selectedCurrency.symbol}${(trip.budgetBreakdown.transport     / exchangeRate).toFixed(0)}`, percentage: Math.round((trip.budgetBreakdown.transport     / trip.budgetBreakdown.total) * 100), color: 'bg-deepblue'   },
-          { category: 'Sightseeing',   amount: `₹${trip.budgetBreakdown.attractions}`,   amountCurr: `${selectedCurrency.symbol}${(trip.budgetBreakdown.attractions   / exchangeRate).toFixed(0)}`, percentage: Math.round((trip.budgetBreakdown.attractions   / trip.budgetBreakdown.total) * 100), color: 'bg-charcoal'   },
+          { category: 'Accommodation', amount: `₹${Math.round(trip.budgetBreakdown.accommodation * (currency === 'INR' ? 1 : exchangeRate)).toLocaleString('en-IN')}`, amountCurr: `${selectedCurrency.symbol}${trip.budgetBreakdown.accommodation}`, percentage: Math.round((trip.budgetBreakdown.accommodation / trip.budgetBreakdown.total) * 100), color: 'bg-saffron'    },
+          { category: 'Food & Drinks', amount: `₹${Math.round(trip.budgetBreakdown.food * (currency === 'INR' ? 1 : exchangeRate)).toLocaleString('en-IN')}`, amountCurr: `${selectedCurrency.symbol}${trip.budgetBreakdown.food}`, percentage: Math.round((trip.budgetBreakdown.food / trip.budgetBreakdown.total) * 100), color: 'bg-terracotta' },
+          { category: 'Transport',     amount: `₹${Math.round(trip.budgetBreakdown.transport * (currency === 'INR' ? 1 : exchangeRate)).toLocaleString('en-IN')}`, amountCurr: `${selectedCurrency.symbol}${trip.budgetBreakdown.transport}`, percentage: Math.round((trip.budgetBreakdown.transport / trip.budgetBreakdown.total) * 100), color: 'bg-deepblue'   },
+          { category: 'Sightseeing',   amount: `₹${Math.round(trip.budgetBreakdown.attractions * (currency === 'INR' ? 1 : exchangeRate)).toLocaleString('en-IN')}`, amountCurr: `${selectedCurrency.symbol}${trip.budgetBreakdown.attractions}`, percentage: Math.round((trip.budgetBreakdown.attractions / trip.budgetBreakdown.total) * 100), color: 'bg-charcoal'   },
         ] : [],
 
         packingList: trip.packingList || [],
