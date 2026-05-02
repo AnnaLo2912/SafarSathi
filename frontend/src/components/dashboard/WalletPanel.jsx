@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react'
-import { FiSmartphone } from 'react-icons/fi'
-import { getWalletBalance, getTransactions, createRazorpayOrder, verifyTopUp } from '../../services/walletService'
+import {
+  getWalletBalance,
+  getTransactions,
+  createRazorpayOrder,
+  verifyTopUp,
+  addDummyMoney,
+} from '../../services/walletService'
 
 export default function WalletPanel() {
-  const [showQR, setShowQR] = useState(false)
   const [topUpAmount, setTopUpAmount] = useState('')
+  const [topUpCurrency, setTopUpCurrency] = useState('USD')
   const [topUpSuccess, setTopUpSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -12,11 +17,28 @@ export default function WalletPanel() {
   const [inrBalance, setInrBalance] = useState(0)
   const [transactions, setTransactions] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [testMode] = useState(true)
+
+  // Currency conversion rates (INR base)
+  const conversionRates = {
+    USD: 83.2,
+    EUR: 92.5,
+    GBP: 105.8,
+    INR: 1,
+    AUD: 55.2,
+  }
+
+  const currencies = ['USD', 'EUR', 'GBP', 'INR', 'AUD']
+  const currencySymbols = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    INR: '₹',
+    AUD: 'A$',
+  }
 
   const quickAmounts = [25, 50, 100, 200]
-  const conversionRate = 83.2
 
-  // Fetch wallet balance and transactions on mount
   useEffect(() => {
     fetchWalletData()
   }, [])
@@ -27,9 +49,8 @@ export default function WalletPanel() {
       setError(null)
       const [balanceData, transactionsData] = await Promise.all([
         getWalletBalance(),
-        getTransactions()
+        getTransactions(),
       ])
-
       setUsdBalance(balanceData.usdBalance || 0)
       setInrBalance(balanceData.inrBalance || 0)
       setTransactions(transactionsData || [])
@@ -41,48 +62,55 @@ export default function WalletPanel() {
     }
   }
 
-  // Format transaction for display
   function formatTransaction(txn) {
     const date = new Date(txn.createdAt)
     const today = new Date()
     let dateStr = date.toLocaleDateString('en-IN')
-    
+
     if (date.toDateString() === today.toDateString()) {
       dateStr = `Today, ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
-    } else if (date.toDateString() === new Date(today.getTime() - 86400000).toDateString()) {
+    } else if (
+      date.toDateString() ===
+      new Date(today.getTime() - 86400000).toDateString()
+    ) {
       dateStr = `Yesterday, ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
     }
 
     const isCredit = txn.type === 'credit'
-    const icon = txn.paymentMethod === 'razorpay' ? '💳' : txn.paymentMethod === 'stripe' ? '💳' : '💰'
-    const amount = isCredit ? `+${txn.currency === 'INR' ? '₹' : '$'}${txn.amount}` : `-${txn.currency === 'INR' ? '₹' : '$'}${txn.amount}`
-    
+    const icon =
+      txn.paymentMethod === 'razorpay' || txn.paymentMethod === 'stripe'
+        ? '💳'
+        : '💰'
+    const symbol = txn.currency === 'INR' ? '₹' : '$'
+    const amount = isCredit
+      ? `+${symbol}${txn.amount}`
+      : `-${symbol}${txn.amount}`
+
     return {
       id: txn._id,
       icon,
       title: txn.description || 'Transaction',
-      subtitle: `${txn.paymentMethod.charAt(0).toUpperCase() + txn.paymentMethod.slice(1)}`,
+      subtitle:
+        txn.paymentMethod.charAt(0).toUpperCase() + txn.paymentMethod.slice(1),
       amount,
       date: dateStr,
-      color: isCredit ? 'text-green-600' : 'text-terracotta'
+      color: isCredit ? 'text-green-600' : 'text-red-500',
     }
   }
 
-  // Handle Razorpay top-up
+  // ── Razorpay top-up ──────────────────────────────────────────────────────────
   async function handleTopUpConfirm() {
     if (!topUpAmount || parseFloat(topUpAmount) <= 0) return
 
     try {
       setIsProcessing(true)
-      
-      // Step 1: Create Razorpay order
-      const orderData = await createRazorpayOrder(parseFloat(topUpAmount))
-      
-      // Step 2: Load Razorpay checkout script
+      const amountInINR = parseFloat(topUpAmount) * conversionRates[topUpCurrency]
+      const orderData = await createRazorpayOrder(amountInINR)
+
       const script = document.createElement('script')
       script.src = 'https://checkout.razorpay.com/v1/checkout.js'
       script.async = true
-      
+
       script.onload = () => {
         const options = {
           key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -92,39 +120,43 @@ export default function WalletPanel() {
           name: 'SafarSathi',
           description: 'Wallet Top-up',
           handler: async (response) => {
-            // Step 3: Verify payment
             try {
               await verifyTopUp({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                amount: parseFloat(topUpAmount)
+                amount: amountInINR,
               })
-
-              setTopUpSuccess(true)
-              setTopUpAmount('')
-              
-              // Refresh wallet balance
-              await fetchWalletData()
-              
-              setTimeout(() => {
-                setTopUpSuccess(false)
-              }, 3000)
+              handleSuccess()
             } catch (err) {
               console.error('Payment verification failed:', err)
-              setError('Payment verification failed. Please try again.')
-              setTimeout(() => setError(null), 3000)
+              showError('Payment verification failed. Please try again.')
             } finally {
               setIsProcessing(false)
             }
           },
+          modal: {
+            ondismiss: async () => {
+              // Test mode: auto-add dummy money when modal is dismissed
+              if (testMode) {
+                try {
+                  await addDummyMoney(amountInINR, topUpCurrency)
+                  handleSuccess()
+                } catch (err) {
+                  console.error('Error adding dummy money:', err)
+                  showError('Failed to add test funds. Please try again.')
+                }
+              } else {
+                showError('Payment cancelled. No funds were added.')
+              }
+              setIsProcessing(false)
+            },
+          },
           prefill: {
             name: 'Tourist',
-            email: 'tourist@safarsathi.com'
+            email: 'tourist@safarsathi.com',
           },
-          theme: {
-            color: '#E8892B'
-          }
+          theme: { color: '#E8892B' },
         }
 
         const rzp = new window.Razorpay(options)
@@ -134,15 +166,43 @@ export default function WalletPanel() {
       document.body.appendChild(script)
     } catch (err) {
       console.error('Error creating order:', err)
-      setError(err.message || 'Failed to create payment order')
+      showError(err.message || 'Failed to create payment order')
       setIsProcessing(false)
-      setTimeout(() => setError(null), 3000)
     }
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  async function handleSuccess() {
+    setTopUpSuccess(true)
+    setTopUpAmount('')
+    setError(null)
+    await fetchWalletData()
+    setTimeout(() => setTopUpSuccess(false), 3000)
+  }
+
+  function showError(msg) {
+    setError(msg)
+    setTimeout(() => setError(null), 3000)
+  }
+
+  function downloadQRCode(qrRef, name) {
+    const canvas = qrRef.current
+    if (!canvas) return
+    const link = document.createElement('a')
+    link.href = canvas.toDataURL('image/png')
+    link.download = `${name}-qr.png`
+    link.click()
+  }
+
+  const amountInINR = topUpAmount
+    ? parseFloat(topUpAmount) * conversionRates[topUpCurrency]
+    : 0
+  const sym = currencySymbols[topUpCurrency]
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="page-fade-in">
-      {/* SECTION HEADER */}
+      {/* ── HEADER ── */}
       <div className="mb-10">
         <div className="font-garamond text-xs uppercase tracking-widest text-terracotta mb-2">
           ✦ Your Wallet
@@ -155,12 +215,11 @@ export default function WalletPanel() {
         </h1>
       </div>
 
-      {/* BALANCE CARDS ROW */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {/* USD BALANCE CARD */}
+      {/* ── BALANCE CARDS ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        {/* USD */}
         <div className="bg-cream rounded-3xl p-8 relative overflow-hidden border-2 border-deepblue/10">
-          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-deepblue/5"></div>
-
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-deepblue/5" />
           <div className="relative z-10">
             <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/50 mb-3">
               USD Balance
@@ -171,23 +230,12 @@ export default function WalletPanel() {
             <div className="font-garamond text-sm text-charcoal/60">
               Available for hotel payments
             </div>
-
-            <div className="mt-6 pt-4 border-t border-charcoal/10 flex items-center justify-between">
-              <span className="font-garamond text-xs text-charcoal/40">Via Stripe</span>
-              <button
-                onClick={() => setTopUpAmount('50')}
-                className="bg-deepblue text-cream font-garamond text-xs px-3 py-1 rounded-full cursor-pointer hover:bg-deepblue/80 transition-colors"
-              >
-                Top Up →
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* INR BALANCE CARD */}
+        {/* INR */}
         <div className="bg-cream rounded-3xl p-8 relative overflow-hidden border-2 border-saffron/20">
-          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-saffron/10"></div>
-
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-saffron/10" />
           <div className="relative z-10">
             <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/50 mb-3">
               INR Balance
@@ -196,218 +244,183 @@ export default function WalletPanel() {
               ₹{inrBalance.toLocaleString('en-IN')}
             </div>
             <div className="font-garamond text-sm text-charcoal/60">
-              For local payments & guides
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-charcoal/10 flex items-center justify-between">
-              <span className="font-garamond text-xs text-charcoal/40">Via Razorpay</span>
-              <button
-                onClick={() => setTopUpAmount('100')}
-                className="bg-saffron text-cream font-garamond text-xs px-3 py-1 rounded-full cursor-pointer hover:bg-amber-600 transition-colors"
-              >
-                Add Money →
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* UPI QR CARD */}
-        <div
-          onClick={() => setShowQR(!showQR)}
-          className="bg-sand rounded-3xl p-8 relative overflow-hidden cursor-pointer hover:border-saffron border border-sand transition-all duration-300"
-        >
-          <div className="relative z-10">
-            <div className="font-garamond text-xs uppercase tracking-widest text-charcoal/50 mb-3">
-              UPI Scanner
-            </div>
-            <div className="mb-3 text-5xl flex items-center justify-center">
-              <FiSmartphone size={56} className="text-charcoal" />
-            </div>
-            <h3 className="font-playfair text-2xl text-charcoal font-bold mb-1">
-              Scan & Pay
-            </h3>
-            <p className="font-garamond text-sm text-charcoal/60">
-              Scan any UPI QR code to pay instantly in INR
-            </p>
-
-            <div className="mt-6 pt-4 border-t border-sand">
-              <button className="bg-charcoal text-cream font-garamond text-xs uppercase tracking-wider px-4 py-2 rounded-full inline-block">
-                {showQR ? 'Close Scanner' : 'Open Scanner →'}
-              </button>
+              For local payments &amp; guides
             </div>
           </div>
         </div>
       </div>
 
-      {/* UPI QR SCANNER */}
-      {showQR && (
-        <div className="bg-sand rounded-3xl p-8 mb-8 text-center">
-          <h2 className="font-playfair text-2xl text-charcoal font-bold mb-2">
-            UPI QR Scanner
-          </h2>
-          <p className="font-garamond text-sm text-charcoal/60 mb-8">
-            Point your camera at any UPI QR code to pay at restaurants, shops, and attractions.
-          </p>
-
-          {/* Mock Camera Viewfinder */}
-          <div className="w-64 h-64 mx-auto rounded-2xl bg-charcoal relative overflow-hidden mb-6">
-            {/* Corner Brackets */}
-            <div className="absolute top-3 left-3 w-8 h-8 border-2 border-saffron rounded-tl-lg" style={{ borderRight: 'none', borderBottom: 'none' }}></div>
-            <div className="absolute top-3 right-3 w-8 h-8 border-2 border-saffron rounded-tr-lg" style={{ borderLeft: 'none', borderBottom: 'none' }}></div>
-            <div className="absolute bottom-3 left-3 w-8 h-8 border-2 border-saffron rounded-bl-lg" style={{ borderRight: 'none', borderTop: 'none' }}></div>
-            <div className="absolute bottom-3 right-3 w-8 h-8 border-2 border-saffron rounded-br-lg" style={{ borderLeft: 'none', borderTop: 'none' }}></div>
-
-            {/* Scanning Line */}
-            <div
-              className="absolute left-3 right-3 h-0.5 bg-saffron/80 animate-bounce"
-              style={{ top: '50%' }}
-            ></div>
-
-            {/* Center Text */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <p className="font-garamond text-white/50 text-sm">Camera preview</p>
-              <p className="font-garamond text-white/30 text-xs mt-2">(requires device camera)</p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
-            <button className="bg-charcoal text-cream font-garamond text-sm uppercase tracking-wider px-8 py-3 rounded-xl hover:bg-saffron hover:text-charcoal transition-all">
-              📷 Activate Camera
-            </button>
-            <button className="border border-charcoal text-charcoal font-garamond text-sm uppercase tracking-wider px-8 py-3 rounded-xl hover:bg-charcoal hover:text-cream transition-all">
-              Enter UPI ID Manually
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* QUICK TOP-UP SECTION */}
+      {/* ── ADD MONEY SECTION ── */}
       <div className="bg-sand rounded-3xl p-8 mb-8">
-        {/* Header Row */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="font-playfair text-xl text-charcoal font-semibold">
-              Quick Top-up
+              Add Money to Wallet
             </h2>
             <p className="font-garamond text-sm text-charcoal/60 mt-1">
-              USD → INR auto conversion at live rates
+              Choose your currency and amount, then select a payment method
             </p>
           </div>
           <div className="bg-green-100 text-green-700 font-garamond text-xs px-3 py-1 rounded-full whitespace-nowrap">
-            1 USD = ₹{conversionRate}
+            1 {topUpCurrency} = ₹{conversionRates[topUpCurrency]}
           </div>
         </div>
 
-        {/* Amount Buttons */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {quickAmounts.map((amount) => (
-            <button
-              key={amount}
-              onClick={() => setTopUpAmount(amount.toString())}
-              className={`border-2 rounded-2xl py-4 text-center cursor-pointer transition-all duration-300 ${
-                topUpAmount === amount.toString()
-                  ? 'border-saffron bg-saffron/10'
-                  : 'border-sand bg-cream hover:border-saffron/50'
-              }`}
-            >
-              <div className="font-playfair text-2xl text-charcoal font-bold">
-                ${amount}
-              </div>
-              <div className="font-garamond text-xs text-charcoal/50 mt-1">
-                ≈ ₹{(amount * conversionRate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </div>
-            </button>
-          ))}
+        {/* Currency selector */}
+        <div className="mb-6">
+          <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
+            Select Currency
+          </label>
+          <div className="grid grid-cols-5 gap-3">
+            {currencies.map((curr) => (
+              <button
+                key={curr}
+                onClick={() => setTopUpCurrency(curr)}
+                className={`border-2 rounded-xl py-3 text-center transition-all duration-300 ${
+                  topUpCurrency === curr
+                    ? 'border-saffron bg-saffron/10'
+                    : 'border-sand bg-cream hover:border-saffron/50'
+                }`}
+              >
+                <div className="font-playfair text-xl text-charcoal font-bold">
+                  {currencySymbols[curr]}
+                </div>
+                <div className="font-garamond text-xs text-charcoal/50 mt-1">
+                  {curr}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Custom Amount Input */}
+        {/* Amount input */}
         <div className="mb-6">
           <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
-            Or enter custom amount (USD)
+            Enter Amount ({topUpCurrency})
           </label>
           <input
             type="number"
-            placeholder="e.g. 75"
+            min="0"
+            placeholder={`e.g. 50 ${topUpCurrency}`}
             value={topUpAmount}
             onChange={(e) => setTopUpAmount(e.target.value)}
             className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
           />
+          {topUpAmount && (
+            <div className="mt-2 text-sm font-garamond text-charcoal/60">
+              ≈ ₹{amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR
+            </div>
+          )}
         </div>
 
-        {/* Payment Method Selection */}
-        <div className="flex gap-4 mb-6">
-          {/* Razorpay */}
-          <div className="flex-1 border-2 border-saffron bg-saffron/5 rounded-2xl p-4 flex items-center gap-3">
-            <span className="text-2xl">💳</span>
-            <div>
-              <div className="font-playfair text-sm text-charcoal font-semibold">
-                Razorpay
-              </div>
-              <div className="font-garamond text-xs text-charcoal/50">
-                UPI / Cards / NetBanking
-              </div>
-            </div>
-            <div className="ml-auto w-5 h-5 rounded-full bg-saffron flex items-center justify-center text-white text-xs">
-              ✓
-            </div>
-          </div>
-
-          {/* Stripe */}
-          <div className="flex-1 border-2 border-sand bg-cream rounded-2xl p-4 flex items-center gap-3 opacity-60">
-            <span className="text-2xl">💳</span>
-            <div>
-              <div className="font-playfair text-sm text-charcoal font-semibold">
-                Stripe
-              </div>
-              <div className="font-garamond text-xs text-charcoal/50">
-                International Cards
-              </div>
-            </div>
+        {/* Quick amounts */}
+        <div className="mb-8">
+          <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
+            Quick Select
+          </label>
+          <div className="grid grid-cols-4 gap-3">
+            {quickAmounts.map((amount) => (
+              <button
+                key={amount}
+                onClick={() => setTopUpAmount(amount.toString())}
+                className={`border-2 rounded-2xl py-3 text-center transition-all duration-300 ${
+                  topUpAmount === amount.toString()
+                    ? 'border-saffron bg-saffron/10'
+                    : 'border-sand bg-cream hover:border-saffron/50'
+                }`}
+              >
+                <div className="font-playfair text-2xl text-charcoal font-bold">
+                  {sym}{amount}
+                </div>
+                <div className="font-garamond text-xs text-charcoal/50 mt-1">
+                  ≈ ₹{(amount * conversionRates[topUpCurrency]).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Top-up Button */}
+        {/* Error */}
         {error && (
-          <div className="w-full bg-red-100 text-red-700 font-garamond text-sm px-4 py-3 rounded-2xl mb-4">
+          <div className="w-full bg-red-100 text-red-700 font-garamond text-sm px-4 py-3 rounded-2xl mb-6">
             {error}
           </div>
         )}
-        {topUpSuccess ? (
-          <button className="w-full bg-green-500 text-white cursor-default font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl text-center">
+
+        {/* Ready-to-pay indicator */}
+        {topUpAmount && !topUpSuccess && (
+          <div className="p-4 bg-saffron/10 border border-saffron rounded-2xl mb-6">
+            <p className="font-garamond text-sm text-charcoal font-semibold">
+              ✓ Ready to pay: {sym}{topUpAmount}{' '}
+              (₹{amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })})
+            </p>
+            <p className="font-garamond text-xs text-charcoal/60 mt-1">
+              Select a payment method below to proceed
+            </p>
+          </div>
+        )}
+
+        {/* Success banner */}
+        {topUpSuccess && (
+          <div className="w-full bg-green-500 text-white font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl text-center">
             ✓ Top-up Successful!
-          </button>
-        ) : (
-          <button
-            onClick={handleTopUpConfirm}
-            disabled={!topUpAmount || isProcessing}
-            className="w-full bg-charcoal text-cream font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl hover:bg-saffron hover:text-charcoal transition-all duration-300 text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isProcessing
-              ? 'Processing...'
-              : topUpAmount
-              ? `Add $${topUpAmount} → ₹${(parseFloat(topUpAmount) * conversionRate).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-              : 'Select an amount'}
-          </button>
+          </div>
         )}
       </div>
 
-      {/* TRANSACTION HISTORY */}
+      {/* ── PAYMENT METHOD CARDS (shown only when amount is entered) ── */}
+      {topUpAmount && !topUpSuccess && (
+        <div className="mb-8">
+          <h3 className="font-playfair text-lg text-charcoal font-semibold mb-4">
+            Select Payment Method
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Razorpay */}
+            <div
+              className="bg-saffron/5 border-2 border-saffron rounded-3xl p-6 cursor-pointer hover:shadow-lg transition-all"
+              onClick={handleTopUpConfirm}
+            >
+              <div className="text-4xl mb-3">💳</div>
+              <h4 className="font-playfair text-lg text-charcoal font-semibold mb-2">
+                Razorpay
+              </h4>
+              <p className="font-garamond text-sm text-charcoal/60 mb-4">
+                UPI / Cards / NetBanking
+              </p>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleTopUpConfirm() }}
+                disabled={isProcessing}
+                className="w-full bg-charcoal text-cream font-garamond text-xs uppercase tracking-widest py-3 rounded-xl hover:bg-saffron hover:text-charcoal transition-all disabled:opacity-50"
+              >
+                {isProcessing ? 'Processing…' : 'Pay Now →'}
+              </button>
+            </div>
+
+
+          </div>
+        </div>
+      )}
+
+
+
+
+
+
+      {/* ── TRANSACTION HISTORY ── */}
       <div className="bg-sand rounded-3xl p-8">
-        {/* Header Row */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-playfair text-xl text-charcoal font-semibold">
             Transaction History
           </h2>
-          <button className="border border-sand text-charcoal/50 font-garamond text-xs px-4 py-2 rounded-full cursor-pointer hover:border-saffron hover:text-saffron transition-all">
+          <button className="border border-sand text-charcoal/50 font-garamond text-xs px-4 py-2 rounded-full hover:border-saffron hover:text-saffron transition-all">
             Export CSV
           </button>
         </div>
 
-        {/* Transactions List */}
         {isLoading ? (
           <div className="text-center py-8">
-            <p className="font-garamond text-charcoal/60">Loading transactions...</p>
+            <p className="font-garamond text-charcoal/60">Loading transactions…</p>
           </div>
         ) : transactions.length === 0 ? (
           <div className="text-center py-8">
@@ -422,14 +435,11 @@ export default function WalletPanel() {
                   key={formatted.id}
                   className="flex items-center gap-4 bg-cream rounded-2xl px-5 py-4 border border-sand hover:border-saffron/30 transition-all duration-200"
                 >
-                  {/* Icon */}
                   <div className="w-10 h-10 rounded-full bg-sand flex items-center justify-center text-lg shrink-0">
                     {formatted.icon}
                   </div>
-
-                  {/* Center Content */}
-                  <div className="flex-1">
-                    <div className="font-playfair text-sm text-charcoal font-semibold">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-playfair text-sm text-charcoal font-semibold truncate">
                       {formatted.title}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -442,9 +452,7 @@ export default function WalletPanel() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Amount */}
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className={`font-playfair text-base font-bold ${formatted.color}`}>
                       {formatted.amount}
                     </div>
