@@ -2,11 +2,10 @@ import { useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import GuideOverview from '../components/guide/GuideOverview'
 import BookingsPanel from '../components/guide/BookingsPanel'
-import PanicAlerts from '../components/guide/PanicAlerts'
 import EarningsPanel from '../components/guide/EarningsPanel'
 import ProfilePanel from '../components/guide/ProfilePanel'
 import ChatPanel from '../components/guide/ChatPanel'
-import { FiBarChart2, FiCalendar, FiAlertCircle, FiMessageCircle, FiDollarSign, FiUser } from 'react-icons/fi'
+import { FiBarChart2, FiCalendar, FiMessageCircle, FiDollarSign, FiUser } from 'react-icons/fi'
 
 export default function GuideDashboard() {
   const [activeTab,    setActiveTab]    = useState('overview')
@@ -16,7 +15,6 @@ export default function GuideDashboard() {
   const tabs = [
     { id: 'overview',  label: 'Overview',     icon: <FiBarChart2    size={20} /> },
     { id: 'bookings',  label: 'Bookings',     icon: <FiCalendar     size={20} /> },
-    { id: 'alerts',    label: 'Panic Alerts', icon: <FiAlertCircle  size={20} /> },
     { id: 'chat',      label: chatUnread > 0 ? `Messages (${chatUnread})` : 'Messages', icon: <FiMessageCircle size={20} /> },
     { id: 'earnings',  label: 'Earnings',     icon: <FiDollarSign   size={20} /> },
     { id: 'profile',   label: 'Profile',      icon: <FiUser         size={20} /> },
@@ -39,7 +37,6 @@ export default function GuideDashboard() {
             {activeTab === 'bookings'  && (
               <BookingsPanel onOpenChat={() => setActiveTab('chat')} />
             )}
-            {activeTab === 'alerts'    && <PanicAlerts />}
             {activeTab === 'earnings'  && <EarningsPanel />}
             {activeTab === 'profile'   && <ProfilePanel />}
 
