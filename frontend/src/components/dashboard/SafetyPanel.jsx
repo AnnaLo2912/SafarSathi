@@ -124,7 +124,6 @@ export default function SafetyPanel() {
   // Load safety profile
   useEffect(() => {
     if (!currentUser) return
-    fetch(`${BACKEND_URL}/api/safety/profile`, { headers: { Authorization: `Bearer ${auth.currentUser?.getIdToken ? '' : ''}` } })
     loadProfile()
   }, [currentUser])
 
