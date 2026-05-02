@@ -5,6 +5,7 @@ import {
   createRazorpayOrder,
   verifyTopUp,
   addDummyMoney,
+  sendMoneyToPhone,
 } from '../../services/walletService'
 
 export default function WalletPanel() {
@@ -18,6 +19,13 @@ export default function WalletPanel() {
   const [transactions, setTransactions] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [testMode] = useState(true)
+
+  const [sendPhone, setSendPhone] = useState('')
+  const [sendAmount, setSendAmount] = useState('')
+  const [sendCurrency, setSendCurrency] = useState('INR')
+  const [sendSuccess, setSendSuccess] = useState(false)
+  const [sendError, setSendError] = useState(null)
+  const [isSending, setIsSending] = useState(false)
 
   // Currency conversion rates (INR base)
   const conversionRates = {
@@ -171,6 +179,32 @@ export default function WalletPanel() {
     }
   }
 
+  // ── Send Money to Phone ──────────────────────────────────────────────────────
+  async function handleSendMoney() {
+    if (!sendPhone || !sendAmount || parseFloat(sendAmount) <= 0) return
+    try {
+      setIsSending(true)
+      setSendError(null)
+      const amountInINR = parseFloat(sendAmount) * conversionRates[sendCurrency]
+      await sendMoneyToPhone({
+        recipientPhone: sendPhone,
+        amount: amountInINR,
+        currency: sendCurrency,
+      })
+      setSendSuccess(true)
+      setSendAmount('')
+      setSendPhone('')
+      await fetchWalletData()
+      setTimeout(() => setSendSuccess(false), 3000)
+    } catch (err) {
+      console.error('Error sending money:', err)
+      setSendError(err.message || 'Failed to send money')
+      setTimeout(() => setSendError(null), 3000)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────────
   async function handleSuccess() {
     setTopUpSuccess(true)
@@ -250,157 +284,263 @@ export default function WalletPanel() {
         </div>
       </div>
 
-      {/* ── ADD MONEY SECTION ── */}
-      <div className="bg-sand rounded-3xl p-8 mb-8">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="font-playfair text-xl text-charcoal font-semibold">
-              Add Money to Wallet
-            </h2>
-            <p className="font-garamond text-sm text-charcoal/60 mt-1">
-              Choose your currency and amount, then select a payment method
-            </p>
-          </div>
-          <div className="bg-green-100 text-green-700 font-garamond text-xs px-3 py-1 rounded-full whitespace-nowrap">
-            1 {topUpCurrency} = ₹{conversionRates[topUpCurrency]}
-          </div>
-        </div>
+      {/* ── ACTIONS (ADD / SEND MONEY) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        
+        {/* LEFT COLUMN: Add Money + Payment Methods */}
+        <div className="flex flex-col gap-6">
+          {/* ── ADD MONEY SECTION ── */}
+          <div className="bg-sand rounded-3xl p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="font-playfair text-xl text-charcoal font-semibold">
+                  Add Money to Wallet
+                </h2>
+                <p className="font-garamond text-sm text-charcoal/60 mt-1">
+                  Choose your currency and amount, then select a payment method
+                </p>
+              </div>
+              <div className="bg-green-100 text-green-700 font-garamond text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                1 {topUpCurrency} = ₹{conversionRates[topUpCurrency]}
+              </div>
+            </div>
 
-        {/* Currency selector */}
-        <div className="mb-6">
-          <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
-            Select Currency
-          </label>
-          <div className="grid grid-cols-5 gap-3">
-            {currencies.map((curr) => (
-              <button
-                key={curr}
-                onClick={() => setTopUpCurrency(curr)}
-                className={`border-2 rounded-xl py-3 text-center transition-all duration-300 ${
-                  topUpCurrency === curr
-                    ? 'border-saffron bg-saffron/10'
-                    : 'border-sand bg-cream hover:border-saffron/50'
-                }`}
-              >
-                <div className="font-playfair text-xl text-charcoal font-bold">
-                  {currencySymbols[curr]}
-                </div>
-                <div className="font-garamond text-xs text-charcoal/50 mt-1">
-                  {curr}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Currency selector */}
+            <div className="mb-6">
+              <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
+                Select Currency
+              </label>
+              <div className="grid grid-cols-5 gap-3">
+                {currencies.map((curr) => (
+                  <button
+                    key={curr}
+                    onClick={() => setTopUpCurrency(curr)}
+                    className={`border-2 rounded-xl py-3 text-center transition-all duration-300 ${
+                      topUpCurrency === curr
+                        ? 'border-saffron bg-saffron/10'
+                        : 'border-sand bg-cream hover:border-saffron/50'
+                    }`}
+                  >
+                    <div className="font-playfair text-xl text-charcoal font-bold">
+                      {currencySymbols[curr]}
+                    </div>
+                    <div className="font-garamond text-xs text-charcoal/50 mt-1">
+                      {curr}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Amount input */}
-        <div className="mb-6">
-          <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
-            Enter Amount ({topUpCurrency})
-          </label>
-          <input
-            type="number"
-            min="0"
-            placeholder={`e.g. 50 ${topUpCurrency}`}
-            value={topUpAmount}
-            onChange={(e) => setTopUpAmount(e.target.value)}
-            className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
-          />
-          {topUpAmount && (
-            <div className="mt-2 text-sm font-garamond text-charcoal/60">
-              ≈ ₹{amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR
+            {/* Amount input */}
+            <div className="mb-6">
+              <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
+                Enter Amount ({topUpCurrency})
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder={`e.g. 50 ${topUpCurrency}`}
+                value={topUpAmount}
+                onChange={(e) => setTopUpAmount(e.target.value)}
+                className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
+              />
+              {topUpAmount && (
+                <div className="mt-2 text-sm font-garamond text-charcoal/60">
+                  ≈ ₹{amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR
+                </div>
+              )}
+            </div>
+
+            {/* Quick amounts */}
+            <div className="mb-8">
+              <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
+                Quick Select
+              </label>
+              <div className="grid grid-cols-4 gap-3">
+                {quickAmounts.map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => setTopUpAmount(amount.toString())}
+                    className={`border-2 rounded-2xl py-3 text-center transition-all duration-300 ${
+                      topUpAmount === amount.toString()
+                        ? 'border-saffron bg-saffron/10'
+                        : 'border-sand bg-cream hover:border-saffron/50'
+                    }`}
+                  >
+                    <div className="font-playfair text-2xl text-charcoal font-bold">
+                      {sym}{amount}
+                    </div>
+                    <div className="font-garamond text-xs text-charcoal/50 mt-1">
+                      ≈ ₹{(amount * conversionRates[topUpCurrency]).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="w-full bg-red-100 text-red-700 font-garamond text-sm px-4 py-3 rounded-2xl mb-6">
+                {error}
+              </div>
+            )}
+
+            {/* Ready-to-pay indicator */}
+            {topUpAmount && !topUpSuccess && (
+              <div className="p-4 bg-saffron/10 border border-saffron rounded-2xl mb-6">
+                <p className="font-garamond text-sm text-charcoal font-semibold">
+                  ✓ Ready to pay: {sym}{topUpAmount}{' '}
+                  (₹{amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })})
+                </p>
+                <p className="font-garamond text-xs text-charcoal/60 mt-1">
+                  Select a payment method below to proceed
+                </p>
+              </div>
+            )}
+
+            {/* Success banner */}
+            {topUpSuccess && (
+              <div className="w-full bg-green-500 text-white font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl text-center">
+                ✓ Top-up Successful!
+              </div>
+            )}
+          </div>
+
+          {/* ── PAYMENT METHOD CARDS (shown only when amount is entered) ── */}
+          {topUpAmount && !topUpSuccess && (
+            <div className="mb-8">
+              <h3 className="font-playfair text-lg text-charcoal font-semibold mb-4">
+                Select Payment Method
+              </h3>
+
+              <div className="grid grid-cols-1 gap-6">
+                {/* Razorpay */}
+                <div
+                  className="bg-saffron/5 border-2 border-saffron rounded-3xl p-6 cursor-pointer hover:shadow-lg transition-all"
+                  onClick={handleTopUpConfirm}
+                >
+                  <div className="text-4xl mb-3">💳</div>
+                  <h4 className="font-playfair text-lg text-charcoal font-semibold mb-2">
+                    Razorpay
+                  </h4>
+                  <p className="font-garamond text-sm text-charcoal/60 mb-4">
+                    UPI / Cards / NetBanking
+                  </p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleTopUpConfirm() }}
+                    disabled={isProcessing}
+                    className="w-full bg-charcoal text-cream font-garamond text-xs uppercase tracking-widest py-3 rounded-xl hover:bg-saffron hover:text-charcoal transition-all disabled:opacity-50"
+                  >
+                    {isProcessing ? 'Processing…' : 'Pay Now →'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Quick amounts */}
-        <div className="mb-8">
-          <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
-            Quick Select
-          </label>
-          <div className="grid grid-cols-4 gap-3">
-            {quickAmounts.map((amount) => (
-              <button
-                key={amount}
-                onClick={() => setTopUpAmount(amount.toString())}
-                className={`border-2 rounded-2xl py-3 text-center transition-all duration-300 ${
-                  topUpAmount === amount.toString()
-                    ? 'border-saffron bg-saffron/10'
-                    : 'border-sand bg-cream hover:border-saffron/50'
-                }`}
-              >
-                <div className="font-playfair text-2xl text-charcoal font-bold">
-                  {sym}{amount}
-                </div>
-                <div className="font-garamond text-xs text-charcoal/50 mt-1">
-                  ≈ ₹{(amount * conversionRates[topUpCurrency]).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="w-full bg-red-100 text-red-700 font-garamond text-sm px-4 py-3 rounded-2xl mb-6">
-            {error}
-          </div>
-        )}
-
-        {/* Ready-to-pay indicator */}
-        {topUpAmount && !topUpSuccess && (
-          <div className="p-4 bg-saffron/10 border border-saffron rounded-2xl mb-6">
-            <p className="font-garamond text-sm text-charcoal font-semibold">
-              ✓ Ready to pay: {sym}{topUpAmount}{' '}
-              (₹{amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 0 })})
-            </p>
-            <p className="font-garamond text-xs text-charcoal/60 mt-1">
-              Select a payment method below to proceed
-            </p>
-          </div>
-        )}
-
-        {/* Success banner */}
-        {topUpSuccess && (
-          <div className="w-full bg-green-500 text-white font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl text-center">
-            ✓ Top-up Successful!
-          </div>
-        )}
-      </div>
-
-      {/* ── PAYMENT METHOD CARDS (shown only when amount is entered) ── */}
-      {topUpAmount && !topUpSuccess && (
-        <div className="mb-8">
-          <h3 className="font-playfair text-lg text-charcoal font-semibold mb-4">
-            Select Payment Method
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Razorpay */}
-            <div
-              className="bg-saffron/5 border-2 border-saffron rounded-3xl p-6 cursor-pointer hover:shadow-lg transition-all"
-              onClick={handleTopUpConfirm}
-            >
-              <div className="text-4xl mb-3">💳</div>
-              <h4 className="font-playfair text-lg text-charcoal font-semibold mb-2">
-                Razorpay
-              </h4>
-              <p className="font-garamond text-sm text-charcoal/60 mb-4">
-                UPI / Cards / NetBanking
+        {/* RIGHT COLUMN: Send Money */}
+        {/* ── SEND MONEY SECTION ── */}
+        <div className="bg-sand rounded-3xl p-8 h-fit">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h2 className="font-playfair text-xl text-charcoal font-semibold">
+                Send Money
+              </h2>
+              <p className="font-garamond text-sm text-charcoal/60 mt-1">
+                Send money instantly to any phone number
               </p>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleTopUpConfirm() }}
-                disabled={isProcessing}
-                className="w-full bg-charcoal text-cream font-garamond text-xs uppercase tracking-widest py-3 rounded-xl hover:bg-saffron hover:text-charcoal transition-all disabled:opacity-50"
-              >
-                {isProcessing ? 'Processing…' : 'Pay Now →'}
-              </button>
             </div>
-
-
           </div>
+
+          {/* Phone input */}
+          <div className="mb-6">
+            <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
+              Recipient Phone Number
+            </label>
+            <input
+              type="tel"
+              placeholder="e.g. +919876543210"
+              value={sendPhone}
+              onChange={(e) => setSendPhone(e.target.value)}
+              className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
+            />
+          </div>
+
+          {/* Currency selector for Send */}
+          <div className="mb-6">
+            <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-3 block">
+              Select Currency
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {currencies.map((curr) => (
+                <button
+                  key={curr}
+                  onClick={() => setSendCurrency(curr)}
+                  className={`border-2 rounded-xl py-2 text-center transition-all duration-300 ${
+                    sendCurrency === curr
+                      ? 'border-saffron bg-saffron/10'
+                      : 'border-sand bg-cream hover:border-saffron/50'
+                  }`}
+                >
+                  <div className="font-playfair text-lg text-charcoal font-bold">
+                    {currencySymbols[curr]}
+                  </div>
+                  <div className="font-garamond text-[10px] text-charcoal/50 mt-1">
+                    {curr}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount input */}
+          <div className="mb-6">
+            <label className="font-garamond text-xs uppercase tracking-widest text-charcoal/60 mb-2 block">
+              Enter Amount ({sendCurrency})
+            </label>
+            <input
+              type="number"
+              min="0"
+              placeholder={`e.g. 50 ${sendCurrency}`}
+              value={sendAmount}
+              onChange={(e) => setSendAmount(e.target.value)}
+              className="w-full bg-cream border border-cream focus:border-saffron focus:outline-none font-garamond text-lg text-charcoal px-5 py-4 rounded-2xl transition-colors"
+            />
+            {sendAmount && (
+              <div className="mt-2 text-sm font-garamond text-charcoal/60">
+                ≈ ₹{(parseFloat(sendAmount) * conversionRates[sendCurrency]).toLocaleString('en-IN', { maximumFractionDigits: 0 })} INR
+              </div>
+            )}
+          </div>
+
+          {/* Send Error */}
+          {sendError && (
+            <div className="w-full bg-red-100 text-red-700 font-garamond text-sm px-4 py-3 rounded-2xl mb-6">
+              {sendError}
+            </div>
+          )}
+
+          {/* Send Success banner */}
+          {sendSuccess && (
+            <div className="w-full bg-green-500 text-white font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl text-center mb-6">
+              ✓ Money Sent Successfully!
+            </div>
+          )}
+
+          {/* Send Button */}
+          {!sendSuccess && (
+            <button
+              onClick={handleSendMoney}
+              disabled={isSending || !sendPhone || !sendAmount}
+              className="w-full bg-charcoal text-cream font-garamond text-sm uppercase tracking-widest py-4 rounded-xl hover:bg-saffron hover:text-charcoal transition-all disabled:opacity-50"
+            >
+              {isSending ? 'Sending…' : 'Send Money →'}
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
 
 

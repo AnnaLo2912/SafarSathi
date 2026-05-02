@@ -35,7 +35,7 @@ const transactionSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["razorpay", "stripe", "wallet"],
+      enum: ["razorpay", "stripe", "wallet", "phone_transfer"],
       required: true,
     },
     externalTransactionId: {
