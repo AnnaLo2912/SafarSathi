@@ -10,13 +10,6 @@ const formatCurrency = (amount) => {
   }).format(amount);
 }
 
-const formatShortCurrency = (amount) => {
-  if (amount >= 1000) {
-    return `₹${(amount / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-  }
-  return `₹${Math.round(amount)}`;
-}
-
 export default function EarningsPanel() {
   const [period, setPeriod] = useState('week')
   const [bookings, setBookings] = useState([])
@@ -60,48 +53,6 @@ export default function EarningsPanel() {
     const monthStats = generateStats(monthBookings)
     const yearStats = generateStats(yearBookings)
 
-    // WEEK BARS
-    const weekBarsMap = { "Mon": 0, "Tue": 0, "Wed": 0, "Thu": 0, "Fri": 0, "Sat": 0, "Sun": 0 }
-    weekBookings.forEach(b => {
-      const d = new Date(b.updatedAt || b.date)
-      if(!isNaN(d)) {
-        const dayStr = d.toLocaleDateString('en-US', { weekday: 'short' })
-        if(weekBarsMap[dayStr] !== undefined) weekBarsMap[dayStr] += (b.price || 0)
-      }
-    })
-    const weekBars = Object.keys(weekBarsMap).map(day => ({ day, amount: weekBarsMap[day], height: 0 }))
-
-    // MONTH BARS
-    const monthBars = [
-      { day: "W1", amount: 0, height: 0 },
-      { day: "W2", amount: 0, height: 0 },
-      { day: "W3", amount: 0, height: 0 },
-      { day: "W4", amount: 0, height: 0 },
-    ]
-    monthBookings.forEach(b => {
-      const d = new Date(b.updatedAt || b.date)
-      if(!isNaN(d)) {
-        const daysAgo = Math.floor((now - d) / oneDay)
-        const weekIdx = Math.min(3, Math.floor(daysAgo / 7))
-        monthBars[3 - weekIdx].amount += (b.price || 0)
-      }
-    })
-
-    // YEAR BARS
-    const yearBarsMap = {}
-    for(let i=11; i>=0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      yearBarsMap[d.toLocaleDateString('en-US', { month: 'short' })] = 0
-    }
-    yearBookings.forEach(b => {
-      const d = new Date(b.updatedAt || b.date)
-      if(!isNaN(d)) {
-        const mStr = d.toLocaleDateString('en-US', { month: 'short' })
-        if(yearBarsMap[mStr] !== undefined) yearBarsMap[mStr] += (b.price || 0)
-      }
-    })
-    const yearBars = Object.keys(yearBarsMap).map(day => ({ day, amount: yearBarsMap[day], height: 0 }))
-
     // TXNS
     const txns = [...completed]
       .sort((a,b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date))
@@ -118,52 +69,30 @@ export default function EarningsPanel() {
         method: 'Wallet'
       }))
 
-    const maxWeek = Math.max(...weekBars.map(b => b.amount), 3000)
-    const maxMonth = Math.max(...monthBars.map(b => b.amount), 3000)
-    const maxYear = Math.max(...yearBars.map(b => b.amount), 3000)
-
-    weekBars.forEach(b => { b.height = maxWeek > 0 ? (b.amount / maxWeek) * 100 : 0 })
-    monthBars.forEach(b => { b.height = maxMonth > 0 ? (b.amount / maxMonth) * 100 : 0 })
-    yearBars.forEach(b => { b.height = maxYear > 0 ? (b.amount / maxYear) * 100 : 0 })
-
     return {
       week: {
         total: formatCurrency(weekStats.total),
         trips: weekStats.trips,
         avgPerTrip: formatCurrency(weekStats.avg),
-        growth: "+0%",
-        bars: weekBars,
-        maxAmount: maxWeek
+        growth: "+0%"
       },
       month: {
         total: formatCurrency(monthStats.total),
         trips: monthStats.trips,
         avgPerTrip: formatCurrency(monthStats.avg),
-        growth: "+0%",
-        bars: monthBars,
-        maxAmount: maxMonth
+        growth: "+0%"
       },
       year: {
         total: formatCurrency(yearStats.total),
         trips: yearStats.trips,
         avgPerTrip: formatCurrency(yearStats.avg),
-        growth: "+0%",
-        bars: yearBars,
-        maxAmount: maxYear
+        growth: "+0%"
       },
-      transactions: txns,
-      payoutInfo: {
-        pending: formatCurrency(0),
-        nextPayout: "End of month",
-        bank: "Saved Bank Acc.",
-        totalEarned: formatCurrency(totalEarned),
-        totalTrips: totalTrips
-      }
+      transactions: txns
     }
   }, [bookings])
 
   const data = dynamicData[period]
-  const payoutInfo = dynamicData.payoutInfo
   const transactions = dynamicData.transactions
 
   if (loading) {
@@ -258,128 +187,6 @@ export default function EarningsPanel() {
         </div>
       </div>
 
-      {/* CHART + PAYOUT ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* LEFT - Bar Chart */}
-        <div className="lg:col-span-2 bg-sand rounded-3xl p-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="font-playfair text-xl text-charcoal font-bold">
-              Earnings Breakdown
-            </h2>
-            <p className="font-garamond text-xs text-charcoal/40 uppercase tracking-wider">
-              {period === 'week'
-                ? 'Daily'
-                : period === 'month'
-                ? 'Weekly'
-                : 'Monthly'}
-            </p>
-          </div>
-
-          {/* Chart */}
-          <div className="relative h-48 mb-4">
-            {/* Y-axis Labels */}
-            <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between pr-2 font-garamond text-xs text-charcoal/30">
-              <span>{formatShortCurrency(data.maxAmount)}</span>
-              <span>{formatShortCurrency(data.maxAmount * 0.66)}</span>
-              <span>{formatShortCurrency(data.maxAmount * 0.33)}</span>
-              <span>₹0</span>
-            </div>
-
-            {/* Grid Lines */}
-            <div className="absolute inset-0 ml-8 flex flex-col justify-between pointer-events-none">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="w-full h-px bg-sand/60" />
-              ))}
-            </div>
-
-            {/* Bars Container */}
-            <div className="ml-8 h-full flex items-end justify-around gap-2">
-              {data.bars.map((bar) => (
-                <div key={bar.day} className="flex flex-col items-center gap-2 flex-1">
-                  <div
-                    className={`w-full rounded-t-xl transition-all duration-700 cursor-pointer ${
-                      bar.amount > 0
-                        ? 'bg-saffron hover:bg-amber-500'
-                        : 'bg-sand/80'
-                    }`}
-                    style={{ height: bar.height + '%' }}
-                  />
-                  <p className="font-garamond text-xs text-charcoal/50">
-                    {bar.day}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT - Payout Info */}
-        <div className="bg-deepblue rounded-3xl p-6">
-          <p className="font-playfair text-xl text-white font-semibold mb-6">
-            Payout Details
-          </p>
-
-          <div className="space-y-4">
-            {/* Pending */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <p className="font-garamond text-sm text-white/60">
-                Pending Payout
-              </p>
-              <p className="font-playfair text-xl text-saffron font-bold">
-                {payoutInfo.pending}
-              </p>
-            </div>
-
-            {/* Next Payout */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <p className="font-garamond text-sm text-white/60">
-                Next Payout Date
-              </p>
-              <p className="font-playfair text-base text-white font-semibold">
-                {payoutInfo.nextPayout}
-              </p>
-            </div>
-
-            {/* Bank */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <p className="font-garamond text-sm text-white/60">
-                Bank Account
-              </p>
-              <p className="font-garamond text-sm text-white/80">
-                {payoutInfo.bank}
-              </p>
-            </div>
-
-            {/* Total Earned */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <p className="font-garamond text-sm text-white/60">
-                Total Earned (All Time)
-              </p>
-              <p className="font-playfair text-base text-white font-semibold">
-                {payoutInfo.totalEarned}
-              </p>
-            </div>
-
-            {/* Total Trips */}
-            <div className="flex items-center justify-between pb-4">
-              <p className="font-garamond text-sm text-white/60">
-                Total Trips
-              </p>
-              <p className="font-playfair text-base text-white font-semibold">
-                {payoutInfo.totalTrips} trips
-              </p>
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <button className="w-full mt-6 bg-saffron text-charcoal font-garamond text-sm uppercase tracking-widest py-4 rounded-2xl hover:bg-amber-500 transition-all duration-300">
-            Request Early Payout →
-          </button>
-          <button className="w-full mt-3 border border-white/20 text-white/60 font-garamond text-xs uppercase tracking-wider py-3 rounded-2xl hover:bg-white/10 transition-all duration-300">
-            Update Bank Details
-          </button>
-        </div>
-      </div>
 
       {/* TRANSACTION HISTORY */}
       <div className="bg-sand rounded-3xl overflow-hidden">

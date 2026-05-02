@@ -38,6 +38,7 @@ export default function ProfilePanel() {
   const [allReviews, setAllReviews] = useState([])
   const [recentReviews, setRecentReviews] = useState([])
   const [deleting, setDeleting] = useState(false)
+  const [completedTripsCount, setCompletedTripsCount] = useState(0)
 
   const [form, setForm] = useState({
     name: userProfile?.name || '',
@@ -96,6 +97,8 @@ export default function ProfilePanel() {
           (booking) => booking.status === 'completed'
         )
 
+        setCompletedTripsCount(completedBookings.length)
+
         const reviewEntries = await Promise.all(
           completedBookings.map(async (booking) => {
             try {
@@ -131,6 +134,7 @@ export default function ProfilePanel() {
         setAvgRating(0)
         setTotalReviews(0)
         setRecentReviews([])
+        setCompletedTripsCount(0)
       }
     }
 
@@ -357,7 +361,7 @@ export default function ProfilePanel() {
             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-sand">
               <div className="text-center">
                 <p className="font-playfair text-xl text-charcoal font-bold">
-                  340
+                  {completedTripsCount}
                 </p>
                 <p className="font-garamond text-xs text-charcoal/40 mt-0.5">
                   Trips
