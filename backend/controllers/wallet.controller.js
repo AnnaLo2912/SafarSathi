@@ -387,7 +387,7 @@ export async function sendMoneyToPhone(req, res) {
       currency: 'INR',
       amount: amount,
       description: `Money sent via phone to ${recipientPhone.slice(-4)}`,
-      paymentMethod: 'phone_transfer',
+      paymentMethod: 'wallet',
       status: 'completed',
       metadata: {
         recipientPhone: recipientPhone,
