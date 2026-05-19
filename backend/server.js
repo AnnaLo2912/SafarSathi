@@ -23,7 +23,10 @@ const app = express();
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    const allowedOrigins  = ["http://localhost:3000"];
+    const allowedOrigins  = [
+      "http://localhost:3000",
+      "https://safar-sathi-ecru.vercel.app"
+    ];
     const isLocalhostPort = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
     if (allowedOrigins.includes(origin) || isLocalhostPort) return callback(null, true);
     return callback(new Error("Not allowed by CORS"));
