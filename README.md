@@ -8,7 +8,9 @@ SafarSathi is a full-stack web platform designed to enhance safety and convenien
 ---
 
 ## Live Demo
-Coming soon after deployment.
+🚀 **Live App:** https://safar-sathi-ecru.vercel.app/
+
+**Backend API:** https://safarsathi-production.up.railway.app
 
 ---
 
