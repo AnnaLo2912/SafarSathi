@@ -3,7 +3,7 @@ import { FiMapPin, FiShield, FiUser, FiPhone, FiPlus, FiTrash2, FiX, FiCheck } f
 import { useAuth } from '../../context/AuthContext'
 import { auth } from '../../firebase'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 async function getHeaders() {
   const token = await auth.currentUser?.getIdToken()

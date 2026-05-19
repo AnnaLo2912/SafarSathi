@@ -3,7 +3,7 @@ import { auth } from '../../firebase'
 import { FiDollarSign, FiX, FiUser, FiPackage, FiBriefcase, FiAward, FiHome } from 'react-icons/fi'
 import { getPlaceImage } from '../../services/unsplash'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 // ── Unsplash Image Hook ───────────────────────────────────────
 function useUnsplashImage(query, enabled = true) {
