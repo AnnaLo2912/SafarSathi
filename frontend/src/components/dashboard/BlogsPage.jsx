@@ -3,7 +3,7 @@ import { useAuth } from  '../../context/AuthContext'
 import { auth } from '../../firebase'
 import CreateBlog from '../../components/dashboard/CreateBlog'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 // ── Template configs ──────────────────────────────────────────
 const TEMPLATES = {

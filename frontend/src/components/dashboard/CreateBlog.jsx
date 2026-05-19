@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { auth } from '../../firebase'
 import { getPlaceImage } from '../../services/unsplash'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 // Auto-detect holiday type from destination/story keywords
 function detectHolidayType(destination, story) {

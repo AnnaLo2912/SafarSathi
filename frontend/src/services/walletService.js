@@ -1,6 +1,6 @@
 import { auth } from "../firebase";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 async function getAuthHeaders() {
   const token = await auth.currentUser?.getIdToken();
