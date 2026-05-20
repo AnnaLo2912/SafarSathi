@@ -311,15 +311,6 @@ lsof -i :5001 | grep LISTEN | awk '{print $2}' | xargs kill -9
 
 ---
 
-## Team
-
-| Role | Name |
-|------|------|
-| Frontend Lead | Amrita Pati |
-| Backend Lead | Jatin Gupta |
-
----
-
 ## Contributing
 
 1. Fork the repository
