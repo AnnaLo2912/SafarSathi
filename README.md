@@ -192,9 +192,11 @@ VITE_BACKEND_URL=http://localhost:5001
 
 ```env
 PORT=5001
-MONGODB_URI=your_mongodb_connection_string
+MONGO_URI=your_mongodb_connection_string
 NODE_ENV=development
 ```
+
+If you already use `MONGODB_URI` in a host dashboard, the backend also accepts that name.
 
 ---
 
